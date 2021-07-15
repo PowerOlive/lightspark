@@ -780,7 +780,7 @@ void ACTIONRECORD::executeActions(DisplayObject *clip, AVM1context* context, con
 				if (!source)
 				{
 					tiny_string sourcepath = asAtomHandler::toString(sp,clip->getSystemState());
-					clip->AVM1GetClipFromPath(sourcepath);
+					source = clip->AVM1GetClipFromPath(sourcepath);
 				}
 				if (source)
 				{
@@ -1064,6 +1064,8 @@ void ACTIONRECORD::executeActions(DisplayObject *clip, AVM1context* context, con
 				{
 					tiny_string s = clip->getSystemState()->getStringFromUniqueId(nameID);
 					asAtom func = clip->AVM1GetVariable(s);
+					if (asAtomHandler::isInvalid(func) && clip != originalclip)
+						func = originalclip->AVM1GetVariable(s);
 					if (asAtomHandler::is<AVM1Function>(func))
 					{
 						asAtom obj = asAtomHandler::fromObjectNoPrimitive(clip);
@@ -1108,7 +1110,10 @@ void ACTIONRECORD::executeActions(DisplayObject *clip, AVM1context* context, con
 							asAtomHandler::as<Class_base>(func)->generator(ret,args,numargs);
 						}
 						else
+						{
 							LOG(LOG_NOT_IMPLEMENTED, "AVM1:"<<clip->getTagID()<<" "<<(clip->is<MovieClip>() ? clip->as<MovieClip>()->state.FP : 0)<<" ActionCallFunction function not found "<<asAtomHandler::toDebugString(name)<<" "<<asAtomHandler::toDebugString(func)<<" "<<numargs);
+							ret = asAtomHandler::undefinedAtom;
+						}
 					}
 				}
 				LOG_CALL("AVM1:"<<clip->getTagID()<<" "<<(clip->is<MovieClip>() ? clip->as<MovieClip>()->state.FP : 0)<<" ActionCallFunction done "<<asAtomHandler::toDebugString(name)<<" "<<numargs);
@@ -1309,7 +1314,7 @@ void ACTIONRECORD::executeActions(DisplayObject *clip, AVM1context* context, con
 			case 0x4a: // ActionToNumber
 			{
 				asAtom arg = PopStack(stack);
-				PushStack(stack,asAtomHandler::fromNumber(clip->getSystemState(),asAtomHandler::toNumber(arg),false));
+				PushStack(stack,asAtomHandler::fromNumber(clip->getSystemState(),asAtomHandler::AVM1toNumber(arg,false),false));
 				ASATOM_DECREF(arg);
 				break;
 			}
@@ -1537,7 +1542,7 @@ void ACTIONRECORD::executeActions(DisplayObject *clip, AVM1context* context, con
 							}
 						}
 						else
-							LOG(LOG_ERROR,"AVM1:"<<clip->getTagID()<<" "<<(clip->is<MovieClip>() ? clip->as<MovieClip>()->state.FP : 0)<<" ActionSetMember no prototype found for "<<asAtomHandler::toDebugString(scriptobject));
+							LOG(LOG_ERROR,"AVM1:"<<clip->getTagID()<<" "<<(clip->is<MovieClip>() ? clip->as<MovieClip>()->state.FP : 0)<<" ActionSetMember no prototype found for "<<asAtomHandler::toDebugString(scriptobject)<<" "<<asAtomHandler::toDebugString(value));
 					}
 					else
 					{
@@ -1808,7 +1813,7 @@ void ACTIONRECORD::executeActions(DisplayObject *clip, AVM1context* context, con
 				}
 				else if (asAtomHandler::is<Class_base>(func))
 				{
-					asAtomHandler::as<Class_base>(func)->getInstance(ret,false,args,numargs);
+					asAtomHandler::as<Class_base>(func)->getInstance(ret,true,args,numargs);
 				}
 				else
 					LOG(LOG_NOT_IMPLEMENTED, "AVM1:"<<clip->getTagID()<<" "<<(clip->is<MovieClip>() ? clip->as<MovieClip>()->state.FP : 0)<<" ActionNewMethod function not found "<<asAtomHandler::toDebugString(scriptobject)<<" "<<asAtomHandler::toDebugString(name)<<" "<<asAtomHandler::toDebugString(func));

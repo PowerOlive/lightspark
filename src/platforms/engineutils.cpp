@@ -1326,6 +1326,13 @@ void EngineData::audio_StreamSetVolume(int channel, double volume)
 		Mix_Volume(channel, curvolume);
 }
 
+void EngineData::audio_StreamSetPanning(int channel, uint16_t left, uint16_t right)
+{
+	if (channel != -1)
+		Mix_SetPanning(channel,left/256,right/256);
+	
+}
+
 void EngineData::audio_StreamDeinit(int channel)
 {
 	if (channel != -1)
@@ -1349,7 +1356,11 @@ void EngineData::audio_ManagerCloseMixer()
 
 bool EngineData::audio_ManagerOpenMixer()
 {
-	return Mix_OpenAudio (audio_getSampleRate(), AUDIO_S16, 2, LIGHTSPARK_AUDIO_BUFFERSIZE) >= 0;
+#if __BYTE_ORDER == __BIG_ENDIAN
+	return Mix_OpenAudio (audio_getSampleRate(), AUDIO_S16MSB, 2, LIGHTSPARK_AUDIO_BUFFERSIZE) >= 0;
+#else
+	return Mix_OpenAudio (audio_getSampleRate(), AUDIO_S16LSB, 2, LIGHTSPARK_AUDIO_BUFFERSIZE) >= 0;
+#endif
 }
 
 void EngineData::audio_ManagerDeinit()
@@ -1380,7 +1391,7 @@ externalFontRenderer::externalFontRenderer(const TextData &_textData, EngineData
 										   bool smoothing)
 	: IDrawable(w, h, x, y,rw,rh,rx,ry,r,xs,ys,im,hm, a, m,
 				_redMultiplier,_greenMultiplier,_blueMultiplier,_alphaMultiplier,
-				_redOffset,_greenOffset,_blueOffset,_alphaOffset),m_engine(engine)
+				_redOffset,_greenOffset,_blueOffset,_alphaOffset,smoothing),m_engine(engine)
 {
 	externalressource = engine->setupFontRenderer(_textData,a,smoothing);
 }

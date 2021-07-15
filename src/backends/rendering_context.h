@@ -63,7 +63,7 @@ public:
 			float alpha, COLOR_MODE colorMode,float rotate, int32_t xtransformed, int32_t ytransformed, int32_t widthtransformed, int32_t heighttransformed, float xscale, float yscale,
 			float redMultiplier, float greenMultiplier, float blueMultiplier, float alphaMultiplier,
 			float redOffset, float greenOffset, float blueOffset, float alphaOffset,
-			bool isMask, bool hasMask, float directMode, RGB directColor)=0;
+			bool isMask, bool hasMask, float directMode, RGB directColor,bool smooth)=0;
 	/**
 	 * Get the right CachedSurface from an object
 	 */
@@ -116,7 +116,7 @@ public:
 	 * Uploads the current matrix as the specified type.
 	 */
 	void setMatrixUniform(LSGL_MATRIX m) const;
-	GLRenderContext() : RenderContext(GL),engineData(NULL), largeTextureSize(0)
+	GLRenderContext() : RenderContext(GL),engineData(nullptr), largeTextureSize(0)
 	{
 	}
 	void SetEngineData(EngineData* data) { engineData = data;}
@@ -126,13 +126,13 @@ public:
 			float alpha, COLOR_MODE colorMode, float rotate, int32_t xtransformed, int32_t ytransformed, int32_t widthtransformed, int32_t heighttransformed, float xscale, float yscale,
 			float redMultiplier, float greenMultiplier, float blueMultiplier, float alphaMultiplier,
 			float redOffset, float greenOffset, float blueOffset, float alphaOffset,
-			bool isMask, bool hasMask, float directMode, RGB directColor) override;
+			bool isMask, bool hasMask, float directMode, RGB directColor,bool smooth) override;
 	/**
 	 * Get the right CachedSurface from an object
 	 * In the OpenGL case we just get the CachedSurface inside the object itself
 	 */
-	const CachedSurface& getCachedSurface(const DisplayObject* obj) const;
-	void setProperties(AS_BLENDMODE blendmode);
+	const CachedSurface& getCachedSurface(const DisplayObject* obj) const override;
+	void setProperties(AS_BLENDMODE blendmode) override;
 
 	/* Utility */
 	bool handleGLErrors() const;
@@ -155,13 +155,13 @@ public:
 			float alpha, COLOR_MODE colorMode, float rotate, int32_t xtransformed, int32_t ytransformed, int32_t widthtransformed, int32_t heighttransformed, float xscale, float yscale,
 			float redMultiplier, float greenMultiplier, float blueMultiplier, float alphaMultiplier,
 			float redOffset, float greenOffset, float blueOffset, float alphaOffset,
-			bool isMask, bool hasMask, float directMode, RGB directColor) override;
+			bool isMask, bool hasMask, float directMode, RGB directColor,bool smooth) override;
 	/**
 	 * Get the right CachedSurface from an object
 	 * In the Cairo case we get the right CachedSurface out of the map
 	 */
-	const CachedSurface& getCachedSurface(const DisplayObject* obj) const;
-	void setProperties(AS_BLENDMODE blendmode);
+	const CachedSurface& getCachedSurface(const DisplayObject* obj) const override;
+	void setProperties(AS_BLENDMODE blendmode) override;
 
 	/**
 	 * The CairoRenderContext acquires the ownership of the buffer

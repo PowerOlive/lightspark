@@ -54,6 +54,7 @@ class PluginManager;
 class RenderThread;
 class SecurityManager;
 class LocaleManager;
+class CurrencyManager;
 class Tag;
 class ApplicationDomain;
 class ASWorker;
@@ -306,6 +307,7 @@ private:
 	void systemFinalize();
 	std::map<tiny_string, Class_base *> classnamemap;
 	set<ASObject*> constantrefs;
+	list<_R<DisplayObject>> listResetParent;
 public:
 	void setURL(const tiny_string& url) DLL_PUBLIC;
 	tiny_string getDumpedSWFPath() const { return dumpedSWFPath;}
@@ -465,6 +467,7 @@ public:
 	IntervalManager* intervalManager;
 	SecurityManager* securityManager;
 	LocaleManager* localeManager;
+    CurrencyManager* currencyManager;
 	ExtScriptObject* extScriptObject;
 
 	enum SCALE_MODE { EXACT_FIT=0, NO_BORDER=1, NO_SCALE=2, SHOW_ALL=3 };
@@ -560,6 +563,48 @@ public:
 	Cond initializedCond;
 	void waitInitialized();
 	void getClassInstanceByName(asAtom &ret, const tiny_string& clsname);
+	Mutex resetParentMutex;
+	void addDisplayObjectToResetParentList(_R<DisplayObject> child)
+	{
+		Locker l(resetParentMutex);
+		listResetParent.push_back(child);
+	}
+	void resetParentList()
+	{
+		Locker l(resetParentMutex);
+		auto it = listResetParent.begin();
+		while (it != listResetParent.end())
+		{
+			(*it)->setParent(nullptr);
+			it = listResetParent.erase(it);
+		}
+	}
+	bool isInResetParentList(DisplayObject* d)
+	{
+		Locker l(resetParentMutex);
+		auto it = listResetParent.begin();
+		while (it != listResetParent.end())
+		{
+			if ((*it).getPtr()==d)
+				return true;
+			it++;
+		}
+		return false;
+	}
+	void removeFromResetParentList(DisplayObject* d)
+	{
+		Locker l(resetParentMutex);
+		auto it = listResetParent.begin();
+		while (it != listResetParent.end())
+		{
+			if ((*it).getPtr()==d)
+			{
+				listResetParent.erase(it);
+				break;
+			}
+			it++;
+		}
+	}
 };
 
 class ParseThread: public IThreadJob

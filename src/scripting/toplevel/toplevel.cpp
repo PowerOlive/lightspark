@@ -139,7 +139,7 @@ multiname *Undefined::setVariableByMultiname(multiname& name, asAtom& o, CONST_A
 	return nullptr;
 }
 
-IFunction::IFunction(Class_base* c,CLASS_SUBTYPE st):ASObject(c,T_FUNCTION,st),length(0),inClass(nullptr),isStatic(false),isCloned(false),functionname(0)
+IFunction::IFunction(Class_base* c,CLASS_SUBTYPE st):ASObject(c,T_FUNCTION,st),length(0),inClass(nullptr),isStatic(false),clonedFrom(nullptr),functionname(0)
 {
 }
 
@@ -312,7 +312,7 @@ ASObject *IFunction::describeType() const
 
 std::string IFunction::toDebugString()
 {
-	string ret = ASObject::toDebugString()+(closure_this ? "(closure:"+closure_this->toDebugString()+")":"")+(isCloned ?" cloned":"");
+	string ret = ASObject::toDebugString()+(closure_this ? "(closure:"+closure_this->toDebugString()+")":"")+(clonedFrom ?" cloned":"");
 #ifndef _NDEBUG
 	if (this->getActivationCount() > 1)
 	{
@@ -349,6 +349,7 @@ void SyntheticFunction::call(asAtom& ret, asAtom& obj, asAtom *args, uint32_t nu
 	if (codeStatus != method_body_info::PRELOADED && codeStatus != method_body_info::USED)
 	{
 		mi->body->codeStatus = method_body_info::PRELOADING;
+		mi->cc.sys = getSystemState();
 		ABCVm::preloadFunction(this);
 		mi->body->codeStatus = method_body_info::PRELOADED;
 		mi->cc.exec_pos = mi->body->preloadedcode.data();
@@ -426,6 +427,7 @@ void SyntheticFunction::call(asAtom& ret, asAtom& obj, asAtom *args, uint32_t nu
 	if (recursive_call)
 	{
 		cc = new call_context(mi);
+		cc->sys = getSystemState();
 		cc->locals= g_newa(asAtom, mi->body->getReturnValuePos()+1+mi->body->localresultcount);
 		cc->stack = g_newa(asAtom, mi->body->max_stack+1);
 		cc->scope_stack=g_newa(asAtom, mi->body->max_scope_depth);
@@ -484,6 +486,9 @@ void SyntheticFunction::call(asAtom& ret, asAtom& obj, asAtom *args, uint32_t nu
 		}
 	}
 	memset(cc->locals+args_len+1,ATOMTYPE_UNDEFINED_BIT,(mi->body->getReturnValuePos()+mi->body->localresultcount-(args_len))*sizeof(asAtom));
+	if (mi->body->localsinitialvalues)
+		memcpy(cc->locals+args_len+1,mi->body->localsinitialvalues,(mi->body->local_count-(args_len+1))*sizeof(asAtom));
+
 	if(mi->needsArgs())
 	{
 		assert_and_throw(cc->mi->body->local_count>args_len);
@@ -939,8 +944,8 @@ const Type* Type::getBuiltinType(SystemState* sys, multiname* mn)
 	if(asAtomHandler::isClass(tmp))
 	{
 		if (mn->isStatic)
-			mn->cachedType = static_cast<const Class_base*>(asAtomHandler::getObjectNoCheck(tmp));
-		return static_cast<const Class_base*>(asAtomHandler::getObjectNoCheck(tmp));
+			mn->cachedType = dynamic_cast<const Class_base*>(asAtomHandler::getObjectNoCheck(tmp));
+		return dynamic_cast<const Class_base*>(asAtomHandler::getObjectNoCheck(tmp));
 	}
 	else
 		return nullptr;
@@ -2860,6 +2865,7 @@ ASFUNCTIONBODY_ATOM(lightspark,unescape)
 ASFUNCTIONBODY_ATOM(lightspark,print)
 {
 	Log::print(asAtomHandler::toString(args[0],sys));
+	ret = asAtomHandler::undefinedAtom;
 }
 
 ASFUNCTIONBODY_ATOM(lightspark,trace)
@@ -2873,6 +2879,7 @@ ASFUNCTIONBODY_ATOM(lightspark,trace)
 		s << asAtomHandler::toString(args[i],sys);
 	}
 	Log::print(s.str());
+	ret = asAtomHandler::undefinedAtom;
 }
 ASFUNCTIONBODY_ATOM(lightspark,AVM1_ASSetPropFlags)
 {

@@ -36,15 +36,15 @@ using namespace lightspark;
 
 TextureChunk::TextureChunk(uint32_t w, uint32_t h)
 {
-	width=w+(w/CHUNKSIZE_REAL)*2;
-	height=h+(h/CHUNKSIZE_REAL)*2;
+	width=w;
+	height=h;
 	if(w==0 || h==0)
 	{
 		chunks=nullptr;
 		return;
 	}
-	const uint32_t blocksW=(width+CHUNKSIZE-1)/CHUNKSIZE;
-	const uint32_t blocksH=(height+CHUNKSIZE-1)/CHUNKSIZE;
+	const uint32_t blocksW=(width+CHUNKSIZE_REAL-1)/CHUNKSIZE_REAL;
+	const uint32_t blocksH=(height+CHUNKSIZE_REAL-1)/CHUNKSIZE_REAL;
 	chunks=new uint32_t[blocksW*blocksH];
 }
 
@@ -64,8 +64,8 @@ TextureChunk& TextureChunk::operator=(const TextureChunk& r)
 	}
 	width=r.width;
 	height=r.height;
-	uint32_t blocksW=(width+CHUNKSIZE-1)/CHUNKSIZE;
-	uint32_t blocksH=(height+CHUNKSIZE-1)/CHUNKSIZE;
+	uint32_t blocksW=(width+CHUNKSIZE_REAL-1)/CHUNKSIZE_REAL;
+	uint32_t blocksH=(height+CHUNKSIZE_REAL-1)/CHUNKSIZE_REAL;
 	texId=r.texId;
 	if(r.chunks)
 	{
@@ -106,11 +106,9 @@ bool TextureChunk::resizeIfLargeEnough(uint32_t w, uint32_t h)
 		height=h;
 		return true;
 	}
-	const uint32_t blocksW=(width+CHUNKSIZE-1)/CHUNKSIZE;
-	const uint32_t blocksH=(height+CHUNKSIZE-1)/CHUNKSIZE;
-	w += (w/CHUNKSIZE_REAL+1)*2;
-	h += (h/CHUNKSIZE_REAL+1)*2;
-	if(w<=blocksW*CHUNKSIZE && h<=blocksH*CHUNKSIZE)
+	const uint32_t blocksW=(width+CHUNKSIZE_REAL-1)/CHUNKSIZE_REAL;
+	const uint32_t blocksH=(height+CHUNKSIZE_REAL-1)/CHUNKSIZE_REAL;
+	if(w<=blocksW*CHUNKSIZE_REAL && h<=blocksH*CHUNKSIZE_REAL)
 	{
 		width=w;
 		height=h;
@@ -126,8 +124,8 @@ CairoRenderer::CairoRenderer(const MATRIX& _m, int32_t _x, int32_t _y, int32_t _
 		bool _smoothing, number_t _xstart, number_t _ystart)
 	: IDrawable(_w, _h, _x, _y, _rw, _rh, _rx, _ry, _r, _xs, _ys, _im, _hm,_a, _ms,
 				_redMultiplier,_greenMultiplier,_blueMultiplier,_alphaMultiplier,
-				_redOffset,_greenOffset,_blueOffset,_alphaOffset)
-	, scaleFactor(_s),smoothing(_smoothing), matrix(_m),xstart(_xstart),ystart(_ystart)
+				_redOffset,_greenOffset,_blueOffset,_alphaOffset,_smoothing)
+	, scaleFactor(_s), matrix(_m),xstart(_xstart),ystart(_ystart)
 {
 }
 
@@ -279,7 +277,6 @@ bool CairoTokenRenderer::cairoPathFromTokens(cairo_t* cr, const tokensVector& to
 	cairo_t *stroke_cr = cairo_create(cairo_get_group_target(cr));
 	cairo_matrix_t mat;
 	cairo_get_matrix(cr,&mat);
-	cairo_matrix_translate(&mat,-xstart,-ystart);
 	cairo_set_matrix(cr, &mat);
 	cairo_set_matrix(stroke_cr, &mat);
 	cairo_push_group(stroke_cr);
@@ -315,6 +312,7 @@ bool CairoTokenRenderer::cairoPathFromTokens(cairo_t* cr, const tokensVector& to
 		}
 		if (tokentype == 0)
 			break;
+		PATH(cairo_move_to, (-xstart)*scalex, (-ystart)*scaley);
 		while (it != itend)
 		{
 			GeomToken p(*it,false);
@@ -1032,6 +1030,7 @@ const TextureChunk& AsyncDrawJob::getTexture()
 	surface.yscale = drawable->getYScale();
 	surface.isMask = drawable->getIsMask();
 	surface.hasMask = drawable->getHasMask();
+	surface.smoothing = drawable->getSmoothing();
 	surface.redMultiplier=drawable->getRedMultiplier();
 	surface.greenMultiplier=drawable->getGreenMultiplier();
 	surface.blueMultiplier=drawable->getBlueMultiplier();
@@ -1073,10 +1072,10 @@ IDrawable::~IDrawable()
 BitmapRenderer::BitmapRenderer(_NR<BitmapContainer> _data, int32_t _x, int32_t _y, int32_t _w, int32_t _h, int32_t _rx, int32_t _ry, int32_t _rw, int32_t _rh, float _r, float _xs, float _ys, bool _im, bool _hm,
 		float _a, const std::vector<MaskData>& _ms,
 		float _redMultiplier, float _greenMultiplier, float _blueMultiplier, float _alphaMultiplier,
-		float _redOffset, float _greenOffset, float _blueOffset, float _alphaOffset)
+		float _redOffset, float _greenOffset, float _blueOffset, float _alphaOffset,bool _smoothing)
 	: IDrawable(_w, _h, _x, _y, _rw, _rh, _rx, _ry, _r, _xs, _ys, _im, _hm,_a, _ms,
 				_redMultiplier,_greenMultiplier,_blueMultiplier,_alphaMultiplier,
-				_redOffset,_greenOffset,_blueOffset,_alphaOffset)
+				_redOffset,_greenOffset,_blueOffset,_alphaOffset,_smoothing)
 	, data(_data)
 {
 }

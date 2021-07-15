@@ -242,15 +242,15 @@ void ASObject::nextValue(asAtom& ret,uint32_t index)
 
 void ASObject::sinit(Class_base* c)
 {
-	c->setDeclaredMethodByQName("hasOwnProperty",AS3,Class<IFunction>::getFunction(c->getSystemState(),hasOwnProperty),NORMAL_METHOD,true);
+	c->setDeclaredMethodByQName("hasOwnProperty",AS3,Class<IFunction>::getFunction(c->getSystemState(),hasOwnProperty,1,Class<Boolean>::getRef(c->getSystemState()).getPtr()),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("setPropertyIsEnumerable",AS3,Class<IFunction>::getFunction(c->getSystemState(),setPropertyIsEnumerable),NORMAL_METHOD,true);
 
-	c->prototype->setVariableByQName("toString","",Class<IFunction>::getFunction(c->getSystemState(),_toString),DYNAMIC_TRAIT);
-	c->prototype->setVariableByQName("toLocaleString","",Class<IFunction>::getFunction(c->getSystemState(),_toLocaleString),DYNAMIC_TRAIT);
-	c->prototype->setVariableByQName("valueOf","",Class<IFunction>::getFunction(c->getSystemState(),valueOf),DYNAMIC_TRAIT);
-	c->prototype->setVariableByQName("hasOwnProperty","",Class<IFunction>::getFunction(c->getSystemState(),hasOwnProperty),DYNAMIC_TRAIT);
-	c->prototype->setVariableByQName("isPrototypeOf","",Class<IFunction>::getFunction(c->getSystemState(),isPrototypeOf),DYNAMIC_TRAIT);
-	c->prototype->setVariableByQName("propertyIsEnumerable","",Class<IFunction>::getFunction(c->getSystemState(),propertyIsEnumerable),DYNAMIC_TRAIT);
+	c->prototype->setVariableByQName("toString","",Class<IFunction>::getFunction(c->getSystemState(),_toString,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),DYNAMIC_TRAIT);
+	c->prototype->setVariableByQName("toLocaleString","",Class<IFunction>::getFunction(c->getSystemState(),_toLocaleString,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),DYNAMIC_TRAIT);
+	c->prototype->setVariableByQName("valueOf","",Class<IFunction>::getFunction(c->getSystemState(),valueOf,0,Class<ASObject>::getRef(c->getSystemState()).getPtr()),DYNAMIC_TRAIT);
+	c->prototype->setVariableByQName("hasOwnProperty","",Class<IFunction>::getFunction(c->getSystemState(),hasOwnProperty,1,Class<Boolean>::getRef(c->getSystemState()).getPtr()),DYNAMIC_TRAIT);
+	c->prototype->setVariableByQName("isPrototypeOf","",Class<IFunction>::getFunction(c->getSystemState(),isPrototypeOf,1,Class<Boolean>::getRef(c->getSystemState()).getPtr()),DYNAMIC_TRAIT);
+	c->prototype->setVariableByQName("propertyIsEnumerable","",Class<IFunction>::getFunction(c->getSystemState(),propertyIsEnumerable,1,Class<Boolean>::getRef(c->getSystemState()).getPtr()),DYNAMIC_TRAIT);
 	c->prototype->setVariableByQName("setPropertyIsEnumerable","",Class<IFunction>::getFunction(c->getSystemState(),setPropertyIsEnumerable),DYNAMIC_TRAIT);
 }
 
@@ -591,7 +591,7 @@ void ASObject::setDeclaredMethodByQName(uint32_t nameId, const nsNameAndKind& ns
 		case NORMAL_METHOD:
 		{
 			asAtom v = asAtomHandler::fromObject(o);
-			obj->setVar(v,this);
+			obj->setVarNoCoerce(v,this);
 			break;
 		}
 		case GETTER_METHOD:
@@ -988,6 +988,11 @@ void variables_map::killObjVar(SystemState* sys,const multiname& mname)
 		}
 	}
 	throw RunTimeException("Variable to kill not found");
+}
+
+Class_base* variables_map::getSlotType(unsigned int n)
+{
+	return (Class_base*)(dynamic_cast<const Class_base*>(slots_vars[n-1]->type));
 }
 
 variable* variables_map::findObjVar(SystemState* sys,const multiname& mname, TRAIT_KIND createKind, uint32_t traitKinds)
@@ -1420,7 +1425,7 @@ GET_VARIABLE_RESULT ASObject::getVariableByMultinameIntern(asAtom &ret, const mu
 	assert(!cls || classdef->isSubClass(cls));
 	uint32_t nsRealId;
 	GET_VARIABLE_RESULT res = GET_VARIABLE_RESULT::GETVAR_NORMAL;
-	variable* obj=Variables.findObjVar(getSystemState(),name,((opt & FROM_GETLEX) || name.hasEmptyNS || name.hasBuiltinNS) ? DECLARED_TRAIT|DYNAMIC_TRAIT : DECLARED_TRAIT,&nsRealId);
+	variable* obj=Variables.findObjVar(getSystemState(),name,((opt & FROM_GETLEX) || name.hasEmptyNS || name.hasBuiltinNS || name.ns.empty()) ? DECLARED_TRAIT|DYNAMIC_TRAIT : DECLARED_TRAIT,&nsRealId);
 	if(obj)
 	{
 		//It seems valid for a class to redefine only the setter, so if we can't find
@@ -1496,7 +1501,7 @@ GET_VARIABLE_RESULT ASObject::getVariableByMultinameIntern(asAtom &ret, const mu
 			if (asAtomHandler::getClosure(obj->var))
 			{
 				LOG_CALL("function " << name << " is already bound to "<<asAtomHandler::toDebugString(obj->var) );
-				if (asAtomHandler::getObject(obj->var)->as<IFunction>()->isCloned)
+				if (asAtomHandler::getObject(obj->var)->as<IFunction>()->clonedFrom)
 					ASATOM_INCREF(obj->var);
 				asAtomHandler::getClosure(obj->var)->incRef();
 				asAtomHandler::set(ret,obj->var);
@@ -1643,7 +1648,7 @@ void variables_map::dumpVariables()
 		}
 		LOG(LOG_INFO, kind <<  '[' << it->second.ns << "] "<< hex<<it->first<<dec<<" "<<
 			getSys()->getStringFromUniqueId(it->first) << ' ' <<
-			asAtomHandler::toDebugString(it->second.var) << ' ' << asAtomHandler::toDebugString(it->second.setter) << ' ' << asAtomHandler::toDebugString(it->second.getter) << ' ' <<it->second.slotid);
+			asAtomHandler::toDebugString(it->second.var) << ' ' << asAtomHandler::toDebugString(it->second.setter) << ' ' << asAtomHandler::toDebugString(it->second.getter) << ' ' <<it->second.slotid << ' ' );//<<dynamic_cast<const Class_base*>(it->second.type));
 	}
 }
 
@@ -2717,7 +2722,7 @@ std::string asAtomHandler::toDebugString(asAtom& a)
 		case ATOM_NUMBERPTR:
 		{
 			std::string ret = Number::toString(toNumber(a))+"d";
-#ifndef _NDEBUG
+#ifndef NDEBUG
 			assert(getObject(a));
 			char buf[300];
 			sprintf(buf,"(%p / %d/%d)",getObject(a),getObject(a)->getRefCount(),getObject(a)->getConstant());

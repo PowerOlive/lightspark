@@ -238,7 +238,6 @@ void BitmapContainer::copyRectangle(_R<BitmapContainer> source,
 
 	if (copyWidth <= 0 || copyHeight <= 0)
 		return;
-
 	int sx = clippedSourceRect.Xmin;
 	int sy = clippedSourceRect.Ymin;
 	if (mergeAlpha==false)

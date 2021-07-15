@@ -109,7 +109,7 @@ void Event::sinit(Class_base* c)
 	c->setDeclaredMethodByQName("stopPropagation","",Class<IFunction>::getFunction(c->getSystemState(),stopPropagation),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("stopImmediatePropagation","",Class<IFunction>::getFunction(c->getSystemState(),stopImmediatePropagation),NORMAL_METHOD,true);
 	REGISTER_GETTER(c,currentTarget);
-	REGISTER_GETTER(c,target);
+	REGISTER_GETTER_RESULTTYPE(c,target,ASObject);
 	REGISTER_GETTER(c,type);
 	REGISTER_GETTER(c,eventPhase);
 	REGISTER_GETTER(c,bubbles);
@@ -624,7 +624,15 @@ ASFUNCTIONBODY_ATOM(EventDispatcher,addEventListener)
 		ASATOM_INCREF(args[1]);
 		const listener newListener(args[1], priority, useCapture);
 		//Ordered insertion
-		list<listener>::iterator insertionPoint=upper_bound(listeners.begin(),listeners.end(),newListener);
+		list<listener>::iterator insertionPoint=lower_bound(listeners.begin(),listeners.end(),newListener);
+		// check if a listener that matches type, use_capture and function is already registered
+		if (insertionPoint != listeners.end() && (*insertionPoint).use_capture == newListener.use_capture)
+		{
+			IFunction* newfunc = asAtomHandler::as<IFunction>(args[1]);
+			IFunction* insertPointFunc = asAtomHandler::as<IFunction>((*insertionPoint).f);
+			if (insertPointFunc == newfunc || (insertPointFunc->clonedFrom && insertPointFunc->clonedFrom == newfunc->clonedFrom && insertPointFunc->closure_this==newfunc->closure_this))
+				return; // don't register the same listener twice
+		}
 		listeners.insert(insertionPoint,newListener);
 	}
 	th->eventListenerAdded(eventName);
@@ -1498,10 +1506,10 @@ void SampleDataEvent::sinit(Class_base* c)
 {
 	CLASS_SETUP_NO_CONSTRUCTOR(c, Event, CLASS_SEALED);
 	c->setVariableAtomByQName("SAMPLE_DATA",nsNameAndKind(),asAtomHandler::fromString(c->getSystemState(),"sampleData"),DECLARED_TRAIT);
-	c->setDeclaredMethodByQName("toString","",Class<IFunction>::getFunction(c->getSystemState(),_toString),NORMAL_METHOD,true);
+	c->setDeclaredMethodByQName("toString","",Class<IFunction>::getFunction(c->getSystemState(),_toString,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),NORMAL_METHOD,true);
 	
-	REGISTER_GETTER_SETTER(c, data);
-	REGISTER_GETTER_SETTER(c, position);
+	REGISTER_GETTER_SETTER_RESULTTYPE(c, data,ByteArray);
+	REGISTER_GETTER_SETTER_RESULTTYPE(c, position,Number);
 }
 ASFUNCTIONBODY_GETTER_SETTER(SampleDataEvent,data)
 ASFUNCTIONBODY_GETTER_SETTER(SampleDataEvent,position)

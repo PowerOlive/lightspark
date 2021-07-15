@@ -148,9 +148,9 @@ void GLRenderContext::setProperties(AS_BLENDMODE blendmode)
 }
 void GLRenderContext::renderTextured(const TextureChunk& chunk, int32_t x, int32_t y, uint32_t w, uint32_t h,
 			float alpha, COLOR_MODE colorMode, float rotate, int32_t xtransformed, int32_t ytransformed, int32_t widthtransformed, int32_t heighttransformed, float xscale, float yscale,
-									 float redMultiplier,float greenMultiplier,float blueMultiplier,float alphaMultiplier,
-									 float redOffset,float greenOffset,float blueOffset,float alphaOffset,
-									 bool isMask, bool hasMask, float directMode, RGB directColor)
+									 float redMultiplier, float greenMultiplier, float blueMultiplier, float alphaMultiplier,
+									 float redOffset, float greenOffset, float blueOffset, float alphaOffset,
+									 bool isMask, bool hasMask, float directMode, RGB directColor, bool smooth)
 {
 	if (isMask)
 	{
@@ -162,6 +162,11 @@ void GLRenderContext::renderTextured(const TextureChunk& chunk, int32_t x, int32
 	else
 	{
 		engineData->exec_glUniform1f(maskUniform, hasMask ? 1 : 0);
+	}
+	if (!smooth)
+	{
+		engineData->exec_glTexParameteri_GL_TEXTURE_2D_GL_TEXTURE_MIN_FILTER_GL_NEAREST();
+		engineData->exec_glTexParameteri_GL_TEXTURE_2D_GL_TEXTURE_MAG_FILTER_GL_NEAREST();
 	}
 	//Set color mode
 	engineData->exec_glUniform1f(yuvUniform, (colorMode==YUV_MODE)?1:0);
@@ -189,7 +194,7 @@ void GLRenderContext::renderTextured(const TextureChunk& chunk, int32_t x, int32
 	engineData->exec_glBindTexture_GL_TEXTURE_2D(largeTextures[chunk.texId].id);
 	const uint32_t blocksPerSide=largeTextureSize/CHUNKSIZE;
 	float startX, startY, endX, endY;
-	assert(chunk.getNumberOfChunks()==((chunk.width+CHUNKSIZE-1)/CHUNKSIZE)*((chunk.height+CHUNKSIZE-1)/CHUNKSIZE));
+	assert(chunk.getNumberOfChunks()==((chunk.width+CHUNKSIZE_REAL-1)/CHUNKSIZE_REAL)*((chunk.height+CHUNKSIZE_REAL-1)/CHUNKSIZE_REAL));
 
 	uint32_t curChunk=0;
 	//The 4 corners of each texture are specified as the vertices of 2 triangles,
@@ -197,26 +202,28 @@ void GLRenderContext::renderTextured(const TextureChunk& chunk, int32_t x, int32
 	//Allocate the data on the stack to reduce heap fragmentation
 	float *vertex_coords = g_newa(float,chunk.getNumberOfChunks()*12);
 	float *texture_coords = g_newa(float,chunk.getNumberOfChunks()*12);
-	for(uint32_t i=0, k=0;i<chunk.height;i+=CHUNKSIZE)
+	float realchunkwidth = chunk.width;
+	float realchunkheight = chunk.height;
+	for(uint32_t i=0, k=0;i<realchunkheight;i+=CHUNKSIZE_REAL)
 	{
-		startY=float(h*i)/float(chunk.height);
-		endY=min(float(h*(i+CHUNKSIZE))/float(chunk.height),float(h));
-		for(uint32_t j=0;j<chunk.width;j+=CHUNKSIZE)
+		startY=float(h*i)/realchunkheight;
+		endY=min(float(h*(i+CHUNKSIZE_REAL))/realchunkheight,float(h));
+		for(uint32_t j=0;j<realchunkwidth;j+=CHUNKSIZE_REAL)
 		{
-			startX=float(w*j)/float(chunk.width);
-			endX=min(float(w*(j+CHUNKSIZE))/float(chunk.width),float(w));
+			startX=float(w*j)/realchunkwidth;
+			endX=min(float(w*(j+CHUNKSIZE_REAL))/realchunkwidth,float(w));
 			const uint32_t curChunkId=chunk.chunks[curChunk];
 			const uint32_t blockX=((curChunkId%blocksPerSide)*CHUNKSIZE);
 			const uint32_t blockY=((curChunkId/blocksPerSide)*CHUNKSIZE);
-			const uint32_t availX=min(int(chunk.width-j),CHUNKSIZE);
-			const uint32_t availY=min(int(chunk.height-i),CHUNKSIZE);
+			const uint32_t availX=min(int(realchunkwidth-j),CHUNKSIZE_REAL);
+			const uint32_t availY=min(int(realchunkheight-i),CHUNKSIZE_REAL);
 			float startU=blockX + 1;
 			startU/=float(largeTextureSize);
 			float startV=blockY + 1;
 			startV/=float(largeTextureSize);
-			float endU=blockX+availX - 1;
+			float endU=blockX+availX+1;
 			endU/=float(largeTextureSize);
-			float endV=blockY+availY - 1;
+			float endV=blockY+availY+1;
 			endV/=float(largeTextureSize);
 
 			//Upper-right triangle of the quad
@@ -266,6 +273,11 @@ void GLRenderContext::renderTextured(const TextureChunk& chunk, int32_t x, int32
 	engineData->exec_glDisableVertexAttribArray(TEXCOORD_ATTRIB);
 	if (isMask)
 		engineData->exec_glBindFramebuffer_GL_FRAMEBUFFER(0);
+	if (!smooth)
+	{
+		engineData->exec_glTexParameteri_GL_TEXTURE_2D_GL_TEXTURE_MIN_FILTER_GL_LINEAR();
+		engineData->exec_glTexParameteri_GL_TEXTURE_2D_GL_TEXTURE_MAG_FILTER_GL_LINEAR();
+	}
 }
 
 int GLRenderContext::errorCount = 0;
@@ -353,7 +365,7 @@ void CairoRenderContext::renderTextured(const TextureChunk& chunk, int32_t x, in
 			float alpha, COLOR_MODE colorMode, float rotate, int32_t xtransformed, int32_t ytransformed, int32_t widthtransformed, int32_t heighttransformed, float xscale, float yscale,
 			float redMultiplier, float greenMultiplier, float blueMultiplier, float alphaMultiplier,
 			float redOffset, float greenOffset, float blueOffset, float alphaOffset,
-			bool isMask, bool hasMask, float directMode, RGB directColor)
+			bool isMask, bool hasMask, float directMode, RGB directColor, bool smooth)
 {
 	if (alpha != 1.0)
 		LOG(LOG_NOT_IMPLEMENTED,"CairoRenderContext.renderTextured alpha not implemented:"<<alpha);
@@ -366,6 +378,7 @@ void CairoRenderContext::renderTextured(const TextureChunk& chunk, int32_t x, in
 	cairo_pattern_set_filter(chunkPattern, CAIRO_FILTER_BILINEAR);
 	cairo_pattern_set_extend(chunkPattern, CAIRO_EXTEND_NONE);
 	cairo_save(cr);
+	cairo_set_antialias(cr,smooth ? CAIRO_ANTIALIAS_DEFAULT : CAIRO_ANTIALIAS_NONE);
 	cairo_matrix_t matrix;
 	cairo_matrix_init_translate(&matrix,xtransformed,ytransformed);
 	cairo_matrix_scale(&matrix, xscale, yscale);
@@ -376,6 +389,7 @@ void CairoRenderContext::renderTextured(const TextureChunk& chunk, int32_t x, in
 	cairo_pattern_destroy(chunkPattern);
 	cairo_rectangle(cr, 0, 0, w, h);
 	cairo_fill(cr);
+//	cairo_surface_write_to_png(chunkSurface,"/tmp/cairo.png");
 	cairo_restore(cr);
 }
 

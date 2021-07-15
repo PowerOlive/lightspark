@@ -84,25 +84,25 @@ void LoaderInfo::sinit(Class_base* c)
 {
 	CLASS_SETUP(c, EventDispatcher, _constructor, CLASS_SEALED);
 	c->isReusable = true;
-	c->setDeclaredMethodByQName("loaderURL","",Class<IFunction>::getFunction(c->getSystemState(),_getLoaderURL),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("loader","",Class<IFunction>::getFunction(c->getSystemState(),_getLoader),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("content","",Class<IFunction>::getFunction(c->getSystemState(),_getContent),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("url","",Class<IFunction>::getFunction(c->getSystemState(),_getURL),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("bytesLoaded","",Class<IFunction>::getFunction(c->getSystemState(),_getBytesLoaded),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("bytesTotal","",Class<IFunction>::getFunction(c->getSystemState(),_getBytesTotal),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("bytes","",Class<IFunction>::getFunction(c->getSystemState(),_getBytes),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("applicationDomain","",Class<IFunction>::getFunction(c->getSystemState(),_getApplicationDomain),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("sharedEvents","",Class<IFunction>::getFunction(c->getSystemState(),_getSharedEvents),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("width","",Class<IFunction>::getFunction(c->getSystemState(),_getWidth),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("height","",Class<IFunction>::getFunction(c->getSystemState(),_getHeight),GETTER_METHOD,true);
-	REGISTER_GETTER(c,parameters);
-	REGISTER_GETTER(c,actionScriptVersion);
-	REGISTER_GETTER(c,swfVersion);
-	REGISTER_GETTER(c,childAllowsParent);
-	REGISTER_GETTER(c,contentType);
-	REGISTER_GETTER(c,uncaughtErrorEvents);
-	REGISTER_GETTER(c,parentAllowsChild);
-	REGISTER_GETTER(c,frameRate);
+	c->setDeclaredMethodByQName("loaderURL","",Class<IFunction>::getFunction(c->getSystemState(),_getLoaderURL,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("loader","",Class<IFunction>::getFunction(c->getSystemState(),_getLoader,0,Class<Loader>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("content","",Class<IFunction>::getFunction(c->getSystemState(),_getContent,0,Class<DisplayObject>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("url","",Class<IFunction>::getFunction(c->getSystemState(),_getURL,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("bytesLoaded","",Class<IFunction>::getFunction(c->getSystemState(),_getBytesLoaded,0,Class<UInteger>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("bytesTotal","",Class<IFunction>::getFunction(c->getSystemState(),_getBytesTotal,0,Class<UInteger>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("bytes","",Class<IFunction>::getFunction(c->getSystemState(),_getBytes,0,Class<ByteArray>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("applicationDomain","",Class<IFunction>::getFunction(c->getSystemState(),_getApplicationDomain,0,Class<ApplicationDomain>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("sharedEvents","",Class<IFunction>::getFunction(c->getSystemState(),_getSharedEvents,0,Class<EventDispatcher>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("width","",Class<IFunction>::getFunction(c->getSystemState(),_getWidth,0,Class<Integer>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("height","",Class<IFunction>::getFunction(c->getSystemState(),_getHeight,0,Class<Integer>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	REGISTER_GETTER_RESULTTYPE(c,parameters,ASObject);
+	REGISTER_GETTER_RESULTTYPE(c,actionScriptVersion,UInteger);
+	REGISTER_GETTER_RESULTTYPE(c,swfVersion,UInteger);
+	REGISTER_GETTER_RESULTTYPE(c,childAllowsParent,Boolean);
+	REGISTER_GETTER_RESULTTYPE(c,contentType,ASString);
+	REGISTER_GETTER_RESULTTYPE(c,uncaughtErrorEvents,UncaughtErrorEvents);
+	REGISTER_GETTER_RESULTTYPE(c,parentAllowsChild,Boolean);
+	REGISTER_GETTER_RESULTTYPE(c,frameRate,Number);
 }
 
 ASFUNCTIONBODY_GETTER(LoaderInfo,parameters);
@@ -744,14 +744,14 @@ Loader::~Loader()
 void Loader::sinit(Class_base* c)
 {
 	CLASS_SETUP(c, DisplayObjectContainer, _constructor, CLASS_SEALED);
-	c->setDeclaredMethodByQName("contentLoaderInfo","",Class<IFunction>::getFunction(c->getSystemState(),_getContentLoaderInfo),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("content","",Class<IFunction>::getFunction(c->getSystemState(),_getContent),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("contentLoaderInfo","",Class<IFunction>::getFunction(c->getSystemState(),_getContentLoaderInfo,0,Class<LoaderInfo>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("content","",Class<IFunction>::getFunction(c->getSystemState(),_getContent,0,Class<DisplayObject>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
 	c->setDeclaredMethodByQName("close","",Class<IFunction>::getFunction(c->getSystemState(),close),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("loadBytes","",Class<IFunction>::getFunction(c->getSystemState(),loadBytes),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("load","",Class<IFunction>::getFunction(c->getSystemState(),load),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("unload","",Class<IFunction>::getFunction(c->getSystemState(),_unload),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("unloadAndStop","",Class<IFunction>::getFunction(c->getSystemState(),_unloadAndStop),NORMAL_METHOD,true);
-	REGISTER_GETTER(c,uncaughtErrorEvents);
+	REGISTER_GETTER_RESULTTYPE(c,uncaughtErrorEvents,UncaughtErrorEvents);
 }
 
 ASFUNCTIONBODY_GETTER(Loader,uncaughtErrorEvents);
@@ -850,13 +850,13 @@ void Sprite::sinit(Class_base* c)
 {
 	CLASS_SETUP(c, DisplayObjectContainer, _constructor, CLASS_SEALED);
 	c->isReusable = true;
-	c->setDeclaredMethodByQName("graphics","",Class<IFunction>::getFunction(c->getSystemState(),_getGraphics),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("graphics","",Class<IFunction>::getFunction(c->getSystemState(),_getGraphics,0,Class<Graphics>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
 	c->setDeclaredMethodByQName("startDrag","",Class<IFunction>::getFunction(c->getSystemState(),_startDrag),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("stopDrag","",Class<IFunction>::getFunction(c->getSystemState(),_stopDrag),NORMAL_METHOD,true);
-	REGISTER_GETTER_SETTER(c, buttonMode);
-	REGISTER_GETTER_SETTER(c, hitArea);
-	REGISTER_GETTER_SETTER(c, useHandCursor);
-	c->setDeclaredMethodByQName("soundTransform","",Class<IFunction>::getFunction(c->getSystemState(),getSoundTransform),GETTER_METHOD,true);
+	REGISTER_GETTER_SETTER_RESULTTYPE(c, buttonMode,Boolean);
+	REGISTER_GETTER_SETTER_RESULTTYPE(c, hitArea,Sprite);
+	REGISTER_GETTER_SETTER_RESULTTYPE(c, useHandCursor,Boolean);
+	c->setDeclaredMethodByQName("soundTransform","",Class<IFunction>::getFunction(c->getSystemState(),getSoundTransform,0,Class<SoundTransform>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
 	c->setDeclaredMethodByQName("soundTransform","",Class<IFunction>::getFunction(c->getSystemState(),setSoundTransform),SETTER_METHOD,true);
 }
 
@@ -1101,6 +1101,14 @@ _NR<DisplayObject> DisplayObjectContainer::hitTestImpl(_NR<DisplayObject> last, 
 				ret = _MNR(this);
 				return ret;
 			}
+			if (interactiveObjectsOnly && !(*j)->is<InteractiveObject>())
+			{
+				// we have hit a non-interactive object, so "this" may be the hit target
+				// but we continue to search the children as there may be an InteractiveObject that is also hit
+				this->incRef();
+				ret = _MNR(this);
+				continue;
+			}
 			break;
 		}
 	}
@@ -1183,7 +1191,7 @@ void Sprite::appendSound(unsigned char *buf, int len, uint32_t frame)
 
 void Sprite::checkSound(uint32_t frame)
 {
-	if (sound && !sound->isPlaying() && streamingsound && soundstartframe==frame)
+	if (sound && streamingsound && soundstartframe==frame)
 		sound->play();
 }
 
@@ -1290,9 +1298,9 @@ Scene::Scene(Class_base* c, const Scene_data& data, uint32_t _numFrames):ASObjec
 void Scene::sinit(Class_base* c)
 {
 	CLASS_SETUP_NO_CONSTRUCTOR(c, ASObject, CLASS_SEALED | CLASS_FINAL);
-	c->setDeclaredMethodByQName("labels","",Class<IFunction>::getFunction(c->getSystemState(),_getLabels),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("name","",Class<IFunction>::getFunction(c->getSystemState(),_getName),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("numFrames","",Class<IFunction>::getFunction(c->getSystemState(),_getNumFrames),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("labels","",Class<IFunction>::getFunction(c->getSystemState(),_getLabels,0,Class<Array>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("name","",Class<IFunction>::getFunction(c->getSystemState(),_getName,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("numFrames","",Class<IFunction>::getFunction(c->getSystemState(),_getNumFrames,0,Class<Integer>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
 }
 
 ASFUNCTIONBODY_ATOM(Scene,_getLabels)
@@ -1388,14 +1396,14 @@ void MovieClip::sinit(Class_base* c)
 {
 	CLASS_SETUP(c, Sprite, _constructor, CLASS_DYNAMIC_NOT_FINAL);
 	c->isReusable = true;
-	c->setDeclaredMethodByQName("currentFrame","",Class<IFunction>::getFunction(c->getSystemState(),_getCurrentFrame),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("totalFrames","",Class<IFunction>::getFunction(c->getSystemState(),_getTotalFrames),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("framesLoaded","",Class<IFunction>::getFunction(c->getSystemState(),_getFramesLoaded),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("currentFrameLabel","",Class<IFunction>::getFunction(c->getSystemState(),_getCurrentFrameLabel),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("currentLabel","",Class<IFunction>::getFunction(c->getSystemState(),_getCurrentLabel),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("currentLabels","",Class<IFunction>::getFunction(c->getSystemState(),_getCurrentLabels),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("scenes","",Class<IFunction>::getFunction(c->getSystemState(),_getScenes),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("currentScene","",Class<IFunction>::getFunction(c->getSystemState(),_getCurrentScene),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("currentFrame","",Class<IFunction>::getFunction(c->getSystemState(),_getCurrentFrame,0,Class<Integer>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("totalFrames","",Class<IFunction>::getFunction(c->getSystemState(),_getTotalFrames,0,Class<Integer>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("framesLoaded","",Class<IFunction>::getFunction(c->getSystemState(),_getFramesLoaded,0,Class<Integer>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("currentFrameLabel","",Class<IFunction>::getFunction(c->getSystemState(),_getCurrentFrameLabel,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("currentLabel","",Class<IFunction>::getFunction(c->getSystemState(),_getCurrentLabel,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("currentLabels","",Class<IFunction>::getFunction(c->getSystemState(),_getCurrentLabels,0,Class<Array>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("scenes","",Class<IFunction>::getFunction(c->getSystemState(),_getScenes,0,Class<Array>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("currentScene","",Class<IFunction>::getFunction(c->getSystemState(),_getCurrentScene,0,Class<Scene>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
 	c->setDeclaredMethodByQName("stop","",Class<IFunction>::getFunction(c->getSystemState(),stop),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("play","",Class<IFunction>::getFunction(c->getSystemState(),play),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("gotoAndStop","",Class<IFunction>::getFunction(c->getSystemState(),gotoAndStop),NORMAL_METHOD,true);
@@ -1403,7 +1411,7 @@ void MovieClip::sinit(Class_base* c)
 	c->setDeclaredMethodByQName("prevFrame","",Class<IFunction>::getFunction(c->getSystemState(),prevFrame),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("nextFrame","",Class<IFunction>::getFunction(c->getSystemState(),nextFrame),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("addFrameScript","",Class<IFunction>::getFunction(c->getSystemState(),addFrameScript),NORMAL_METHOD,true);
-	REGISTER_GETTER_SETTER(c, enabled);
+	REGISTER_GETTER_SETTER_RESULTTYPE(c, enabled,Boolean);
 }
 
 ASFUNCTIONBODY_GETTER_SETTER(MovieClip, enabled);
@@ -2179,7 +2187,7 @@ ASFUNCTIONBODY_ATOM(MovieClip,AVM1CreateEmptyMovieClip)
 ASFUNCTIONBODY_ATOM(MovieClip,AVM1RemoveMovieClip)
 {
 	MovieClip* th=asAtomHandler::as<MovieClip>(obj);
-	if (th->getParent() && !th->legacy && !th->is<RootMovieClip>())
+	if (th->getParent() && !th->is<RootMovieClip>())
 	{
 		if (th->name != BUILTIN_STRINGS::EMPTY)
 		{
@@ -2303,7 +2311,7 @@ ASFUNCTIONBODY_ATOM(MovieClip,AVM1AttachBitmap)
 		throw RunTimeException("AVM1: attachBitmap first parameter is no BitmapData");
 	}
 
-	BitmapData* data = asAtomHandler::as<BitmapData>(args[0]);
+	AVM1BitmapData* data = asAtomHandler::as<AVM1BitmapData>(args[0]);
 	data->incRef();
 	Bitmap* toAdd = Class<AVM1Bitmap>::getInstanceS(sys,_MR(data));
 	if (argslen > 2)
@@ -2391,21 +2399,21 @@ void DisplayObjectContainer::sinit(Class_base* c)
 {
 	CLASS_SETUP(c, InteractiveObject, _constructor, CLASS_SEALED);
 	c->isReusable = true;
-	c->setDeclaredMethodByQName("numChildren","",Class<IFunction>::getFunction(c->getSystemState(),_getNumChildren),GETTER_METHOD,true);
-	c->setDeclaredMethodByQName("getChildIndex","",Class<IFunction>::getFunction(c->getSystemState(),_getChildIndex),NORMAL_METHOD,true);
+	c->setDeclaredMethodByQName("numChildren","",Class<IFunction>::getFunction(c->getSystemState(),_getNumChildren,0,Class<Integer>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("getChildIndex","",Class<IFunction>::getFunction(c->getSystemState(),_getChildIndex,1,Class<Integer>::getRef(c->getSystemState()).getPtr()),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("setChildIndex","",Class<IFunction>::getFunction(c->getSystemState(),_setChildIndex),NORMAL_METHOD,true);
-	c->setDeclaredMethodByQName("getChildAt","",Class<IFunction>::getFunction(c->getSystemState(),getChildAt),NORMAL_METHOD,true);
-	c->setDeclaredMethodByQName("getChildByName","",Class<IFunction>::getFunction(c->getSystemState(),getChildByName),NORMAL_METHOD,true);
-	c->setDeclaredMethodByQName("getObjectsUnderPoint","",Class<IFunction>::getFunction(c->getSystemState(),getObjectsUnderPoint),NORMAL_METHOD,true);
-	c->setDeclaredMethodByQName("addChild","",Class<IFunction>::getFunction(c->getSystemState(),addChild),NORMAL_METHOD,true);
-	c->setDeclaredMethodByQName("removeChild","",Class<IFunction>::getFunction(c->getSystemState(),removeChild),NORMAL_METHOD,true);
-	c->setDeclaredMethodByQName("removeChildAt","",Class<IFunction>::getFunction(c->getSystemState(),removeChildAt),NORMAL_METHOD,true);
+	c->setDeclaredMethodByQName("getChildAt","",Class<IFunction>::getFunction(c->getSystemState(),getChildAt,1,Class<DisplayObject>::getRef(c->getSystemState()).getPtr()),NORMAL_METHOD,true);
+	c->setDeclaredMethodByQName("getChildByName","",Class<IFunction>::getFunction(c->getSystemState(),getChildByName,1,Class<DisplayObject>::getRef(c->getSystemState()).getPtr()),NORMAL_METHOD,true);
+	c->setDeclaredMethodByQName("getObjectsUnderPoint","",Class<IFunction>::getFunction(c->getSystemState(),getObjectsUnderPoint,1,Class<Array>::getRef(c->getSystemState()).getPtr()),NORMAL_METHOD,true);
+	c->setDeclaredMethodByQName("addChild","",Class<IFunction>::getFunction(c->getSystemState(),addChild,1,Class<DisplayObject>::getRef(c->getSystemState()).getPtr()),NORMAL_METHOD,true);
+	c->setDeclaredMethodByQName("removeChild","",Class<IFunction>::getFunction(c->getSystemState(),removeChild,1,Class<DisplayObject>::getRef(c->getSystemState()).getPtr()),NORMAL_METHOD,true);
+	c->setDeclaredMethodByQName("removeChildAt","",Class<IFunction>::getFunction(c->getSystemState(),removeChildAt,1,Class<DisplayObject>::getRef(c->getSystemState()).getPtr()),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("removeChildren","",Class<IFunction>::getFunction(c->getSystemState(),removeChildren),NORMAL_METHOD,true);
-	c->setDeclaredMethodByQName("addChildAt","",Class<IFunction>::getFunction(c->getSystemState(),addChildAt),NORMAL_METHOD,true);
+	c->setDeclaredMethodByQName("addChildAt","",Class<IFunction>::getFunction(c->getSystemState(),addChildAt,2,Class<DisplayObject>::getRef(c->getSystemState()).getPtr()),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("swapChildren","",Class<IFunction>::getFunction(c->getSystemState(),swapChildren),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("swapChildrenAt","",Class<IFunction>::getFunction(c->getSystemState(),swapChildrenAt),NORMAL_METHOD,true);
 	c->setDeclaredMethodByQName("contains","",Class<IFunction>::getFunction(c->getSystemState(),contains),NORMAL_METHOD,true);
-	c->setDeclaredMethodByQName("mouseChildren","",Class<IFunction>::getFunction(c->getSystemState(),_setMouseChildren),SETTER_METHOD,true);
+	c->setDeclaredMethodByQName("mouseChildren","",Class<IFunction>::getFunction(c->getSystemState(),_setMouseChildren,0,Class<Boolean>::getRef(c->getSystemState()).getPtr()),SETTER_METHOD,true);
 	c->setDeclaredMethodByQName("mouseChildren","",Class<IFunction>::getFunction(c->getSystemState(),_getMouseChildren),GETTER_METHOD,true);
 	REGISTER_GETTER_SETTER(c, tabChildren);
 }
@@ -2847,7 +2855,7 @@ void DisplayObjectContainer::_addChildAt(_R<DisplayObject> child, unsigned int i
 {
 	//If the child has no parent, set this container to parent
 	//If there is a previous parent, purge the child from his list
-	if(child->getParent())
+	if(child->getParent() && !getSystemState()->isInResetParentList(child.getPtr()))
 	{
 		//Child already in this container
 		if(child->getParent()==this)
@@ -2858,6 +2866,7 @@ void DisplayObjectContainer::_addChildAt(_R<DisplayObject> child, unsigned int i
 			child->getParent()->_removeChild(child.getPtr());
 		}
 	}
+	getSystemState()->removeFromResetParentList(child.getPtr());
 	child->setParent(this);
 	{
 		Locker l(mutexDisplayList);
@@ -2876,7 +2885,7 @@ void DisplayObjectContainer::_addChildAt(_R<DisplayObject> child, unsigned int i
 		child->setOnStage(onStage);
 }
 
-bool DisplayObjectContainer::_removeChild(DisplayObject* child)
+bool DisplayObjectContainer::_removeChild(DisplayObject* child,bool direct)
 {
 	if(!child->getParent() || child->getParent()!=this)
 		return false;
@@ -2887,10 +2896,14 @@ bool DisplayObjectContainer::_removeChild(DisplayObject* child)
 		Locker l(mutexDisplayList);
 		std::vector<_R<DisplayObject>>::iterator it=find(dynamicDisplayList.begin(),dynamicDisplayList.end(),_MR(child));
 		if(it==dynamicDisplayList.end())
-			return false;
+			return getSystemState()->isInResetParentList(child);
 
 		child->setOnStage(false);
-		child->setParent(nullptr);
+		child->incRef();
+		if (direct)
+			child->setParent(nullptr);
+		else
+			getSystemState()->addDisplayObjectToResetParentList(_MR(child));
 		child->setMask(NullRef);
 		
 		//Erase this from the legacy child map (if it is in there)
@@ -2914,7 +2927,7 @@ void DisplayObjectContainer::_removeAllChildren()
 	{
 		_R<DisplayObject> child = *it;
 		child->setOnStage(false);
-		child->setParent(nullptr);
+		getSystemState()->addDisplayObjectToResetParentList(child);
 		child->setMask(NullRef);
 		if (!needsActionScript3())
 			child->removeAVM1Listeners();
@@ -3079,7 +3092,7 @@ ASFUNCTIONBODY_ATOM(DisplayObjectContainer,removeChildAt)
 			th->mapLegacyChildToDepth.erase(it2);
 		}
 		child->setOnStage(false);
-		child->setParent(nullptr);
+		sys->addDisplayObjectToResetParentList(*it);
 		//incRef before the refrence is destroyed
 		child->incRef();
 		th->dynamicDisplayList.erase(it);
@@ -4255,7 +4268,13 @@ ASFUNCTIONBODY_GETTER_SETTER_CB(Bitmap,pixelSnapping,onPixelSnappingChanged);
 void Bitmap::updatedData()
 {
 	if(bitmapData.isNull() || bitmapData->getBitmapContainer().isNull())
+	{
+		if (cachedSurface.isChunkOwner && cachedSurface.tex)
+			cachedSurface.tex->makeEmpty();
+		else
+			cachedSurface.tex=nullptr;
 		return;
+	}
 	cachedSurface.tex = &bitmapData->getBitmapContainer()->bitmaptexture;
 	cachedSurface.isChunkOwner=false;
 	hasChanged=true;
@@ -4387,7 +4406,7 @@ IDrawable *Bitmap::invalidate(DisplayObject *target, const MATRIX &initialMatrix
 				, isMask, hasMask
 				, getConcatenatedAlpha(), masks
 				, redMultiplier,greenMultiplier,blueMultiplier,alphaMultiplier
-				, redOffset,greenOffset,blueOffset,alphaOffset);
+				, redOffset,greenOffset,blueOffset,alphaOffset,this->smoothing);
 }
 
 void SimpleButton::sinit(Class_base* c)
@@ -4845,7 +4864,7 @@ void SimpleButton::reflectState()
 {
 	assert(dynamicDisplayList.empty() || dynamicDisplayList.size() == 1);
 	if(!dynamicDisplayList.empty())
-		_removeChild(dynamicDisplayList.front().getPtr());
+		_removeChild(dynamicDisplayList.front().getPtr(),true);
 
 	if((currentState == UP || currentState == STATE_OUT) && !upState.isNull())
 	{
@@ -5253,7 +5272,6 @@ void MovieClip::initFrame()
 	{
 		frameScriptToExecute=state.FP;
 	}
-	state.frameadvanced=false;
 	state.creatingframe=false;
 }
 
@@ -5329,6 +5347,13 @@ void MovieClip::advanceFrame()
 		stopSound();
 	else
 		checkSound(state.next_FP);
+	if (state.frameadvanced && state.explicit_FP)
+	{
+		// frame was advanced more than once in one EnterFrame event, so initFrame was not called
+		// set last_FP to the FP set by previous advanceFrame
+		state.last_FP=state.FP;
+	}
+	state.frameadvanced=false;
 	state.creatingframe=true;
 	if (frameScriptToExecute != UINT32_MAX)
 	{
@@ -5405,14 +5430,12 @@ void MovieClip::constructionComplete()
 
 void MovieClip::afterConstruction()
 {
-	// execute framescript of frame 0 after construction is completed
+	// set framescript of frame 0 after construction is completed
 	// only if state.FP was not changed during construction
 	if(frameScripts.count(0) && state.FP == 0)
 	{
 		if (frameScripts.count(0))
 			frameScriptToExecute = 0;
-		this->incRef();
-		this->getSystemState()->currentVm->prependEvent(NullRef, _MR(new (this->getSystemState()->unaccountedMemory) ExecuteFrameScriptEvent(_MR(this))));
 	}
 	if (!this->loadedFrom->usesActionScript3 && !this->inAVM1Attachment)
 	{

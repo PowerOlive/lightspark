@@ -44,21 +44,20 @@ const char* Capabilities::MANUFACTURER = "Adobe Linux";
 void Capabilities::sinit(Class_base* c)
 {
 	CLASS_SETUP(c, ASObject, _constructorNotInstantiatable, CLASS_SEALED | CLASS_FINAL);
-	c->setDeclaredMethodByQName("language","",Class<IFunction>::getFunction(c->getSystemState(),_getLanguage),GETTER_METHOD,false);
-	c->setDeclaredMethodByQName("playerType","",Class<IFunction>::getFunction(c->getSystemState(),_getPlayerType),GETTER_METHOD,false);
-	c->setDeclaredMethodByQName("version","",Class<IFunction>::getFunction(c->getSystemState(),_getVersion),GETTER_METHOD,false);
-	c->setDeclaredMethodByQName("cpuArchitecture","",Class<IFunction>::getFunction(c->getSystemState(),_getCPUArchitecture),GETTER_METHOD,false);
-	c->setDeclaredMethodByQName("isDebugger","",Class<IFunction>::getFunction(c->getSystemState(),_getIsDebugger),GETTER_METHOD,false);
-	c->setDeclaredMethodByQName("isEmbeddedInAcrobat","",Class<IFunction>::getFunction(c->getSystemState(),_getIsEmbeddedInAcrobat),GETTER_METHOD,false);
-	c->setDeclaredMethodByQName("localFileReadDisable","",Class<IFunction>::getFunction(c->getSystemState(),_getLocalFileReadDisable),GETTER_METHOD,false);
-	c->setDeclaredMethodByQName("manufacturer","",Class<IFunction>::getFunction(c->getSystemState(),_getManufacturer),GETTER_METHOD,false);
-	c->setDeclaredMethodByQName("os","",Class<IFunction>::getFunction(c->getSystemState(),_getOS),GETTER_METHOD,false);
-	c->setDeclaredMethodByQName("serverString","",Class<IFunction>::getFunction(c->getSystemState(),_getServerString),GETTER_METHOD,false);
-	c->setDeclaredMethodByQName("screenResolutionX","",Class<IFunction>::getFunction(c->getSystemState(),_getScreenResolutionX),GETTER_METHOD,false);
-	c->setDeclaredMethodByQName("screenResolutionY","",Class<IFunction>::getFunction(c->getSystemState(),_getScreenResolutionY),GETTER_METHOD,false);
-	c->setDeclaredMethodByQName("hasAccessibility","",Class<IFunction>::getFunction(c->getSystemState(),_getHasAccessibility),GETTER_METHOD,false);
-	c->setDeclaredMethodByQName("screenDPI","",Class<IFunction>::getFunction(c->getSystemState(),_getScreenDPI),GETTER_METHOD,false);
-	
+	c->setDeclaredMethodByQName("language","",Class<IFunction>::getFunction(c->getSystemState(),_getLanguage,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
+	c->setDeclaredMethodByQName("playerType","",Class<IFunction>::getFunction(c->getSystemState(),_getPlayerType,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
+	c->setDeclaredMethodByQName("version","",Class<IFunction>::getFunction(c->getSystemState(),_getVersion,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
+	c->setDeclaredMethodByQName("cpuArchitecture","",Class<IFunction>::getFunction(c->getSystemState(),_getCPUArchitecture,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
+	c->setDeclaredMethodByQName("isDebugger","",Class<IFunction>::getFunction(c->getSystemState(),_getIsDebugger,0,Class<Boolean>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
+	c->setDeclaredMethodByQName("isEmbeddedInAcrobat","",Class<IFunction>::getFunction(c->getSystemState(),_getIsEmbeddedInAcrobat,0,Class<Boolean>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
+	c->setDeclaredMethodByQName("localFileReadDisable","",Class<IFunction>::getFunction(c->getSystemState(),_getLocalFileReadDisable,0,Class<Boolean>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
+	c->setDeclaredMethodByQName("manufacturer","",Class<IFunction>::getFunction(c->getSystemState(),_getManufacturer,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
+	c->setDeclaredMethodByQName("os","",Class<IFunction>::getFunction(c->getSystemState(),_getOS,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
+	c->setDeclaredMethodByQName("serverString","",Class<IFunction>::getFunction(c->getSystemState(),_getServerString,0,Class<ASString>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
+	c->setDeclaredMethodByQName("screenResolutionX","",Class<IFunction>::getFunction(c->getSystemState(),_getScreenResolutionX,0,Class<Number>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
+	c->setDeclaredMethodByQName("screenResolutionY","",Class<IFunction>::getFunction(c->getSystemState(),_getScreenResolutionY,0,Class<Number>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
+	c->setDeclaredMethodByQName("hasAccessibility","",Class<IFunction>::getFunction(c->getSystemState(),_getHasAccessibility,0,Class<Boolean>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
+	c->setDeclaredMethodByQName("screenDPI","",Class<IFunction>::getFunction(c->getSystemState(),_getScreenDPI,0,Class<Number>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,false);
 }
 
 ASFUNCTIONBODY_ATOM(Capabilities,_getPlayerType)
@@ -204,8 +203,10 @@ ASFUNCTIONBODY_ATOM(Capabilities,_getScreenDPI)
 	asAtomHandler::setNumber(ret,sys,dpi);
 }
 
-ApplicationDomain::ApplicationDomain(Class_base* c, _NR<ApplicationDomain> p):ASObject(c,T_OBJECT,SUBTYPE_APPLICATIONDOMAIN),parentDomain(p)
+ApplicationDomain::ApplicationDomain(Class_base* c, _NR<ApplicationDomain> p):ASObject(c,T_OBJECT,SUBTYPE_APPLICATIONDOMAIN),defaultDomainMemory(Class<ByteArray>::getInstanceSNoArgs(c->getSystemState())), parentDomain(p)
 {
+	defaultDomainMemory->setLength(MIN_DOMAIN_MEMORY_LIMIT);
+	currentDomainMemory=defaultDomainMemory.getPtr();
 }
 
 void ApplicationDomain::sinit(Class_base* c)
@@ -221,11 +222,12 @@ void ApplicationDomain::sinit(Class_base* c)
 	REGISTER_GETTER(c,parentDomain);
 }
 
-ASFUNCTIONBODY_GETTER_SETTER(ApplicationDomain,domainMemory);
+ASFUNCTIONBODY_GETTER_SETTER_CB(ApplicationDomain,domainMemory,cbDomainMemory);
 ASFUNCTIONBODY_GETTER(ApplicationDomain,parentDomain);
 
-void ApplicationDomain::buildTraits(ASObject* o)
+void ApplicationDomain::cbDomainMemory(_NR<ByteArray> oldvalue)
 {
+	checkDomainMemory();
 }
 
 void ApplicationDomain::finalize()
@@ -273,7 +275,7 @@ ASFUNCTIONBODY_ATOM(ApplicationDomain,hasDefinition)
 	assert(argslen==1);
 	const tiny_string& tmp=asAtomHandler::toString(args[0],sys);
 
-	multiname name(NULL);
+	multiname name(nullptr);
 	name.name_type=multiname::NAME_STRING;
 
 	tiny_string nsName;
@@ -308,7 +310,7 @@ ASFUNCTIONBODY_ATOM(ApplicationDomain,getDefinition)
 	assert(argslen==1);
 	const tiny_string& tmp=asAtomHandler::toString(args[0],sys);
 
-	multiname name(NULL);
+	multiname name(nullptr);
 	name.name_type=multiname::NAME_STRING;
 
 	tiny_string nsName;
@@ -340,7 +342,7 @@ void ApplicationDomain::registerGlobalScope(Global* scope)
 ASObject* ApplicationDomain::getVariableByString(const std::string& str, ASObject*& target)
 {
 	size_t index=str.rfind('.');
-	multiname name(NULL);
+	multiname name(nullptr);
 	name.name_type=multiname::NAME_STRING;
 	if(index==str.npos) //No dot
 	{
@@ -457,6 +459,11 @@ ASObject* ApplicationDomain::getVariableByMultinameOpportunistic(const multiname
 			return asAtomHandler::toObject(o,getSystemState());
 		}
 	}
+	auto it = classesBeingDefined.find(&name);
+	if (it != classesBeingDefined.end())
+	{
+		return ((*it).second);
+	}
 	if(!parentDomain.isNull())
 	{
 		ASObject* ret=parentDomain->getVariableByMultinameOpportunistic(name);
@@ -470,9 +477,10 @@ void ApplicationDomain::checkDomainMemory()
 {
 	if(domainMemory.isNull())
 	{
-		domainMemory = _NR<ByteArray>(Class<ByteArray>::getInstanceS(this->getSystemState()));
+		domainMemory = defaultDomainMemory;
 		domainMemory->setLength(MIN_DOMAIN_MEMORY_LIMIT);
 	}
+	currentDomainMemory=domainMemory.getPtr();
 }
 
 LoaderContext::LoaderContext(Class_base* c):
@@ -630,6 +638,8 @@ ASFUNCTIONBODY_ATOM(lightspark, fscommand)
 	assert_and_throw(argslen >= 1 && argslen <= 2);
 	assert_and_throw(asAtomHandler::isString(args[0]));
 	tiny_string command = asAtomHandler::toString(args[0],sys);
+	// according to specs fscommand is a void method, but the abcasm tests seem to expect a result value, so we set the result to undefined
+	ret = asAtomHandler::undefinedAtom;
 	if(command == "quit")
 	{
 		if (getWorker() && !getWorker()->isPrimordial) // only allow quit from main worker

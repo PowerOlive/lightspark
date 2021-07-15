@@ -1314,7 +1314,7 @@ bool SocketPolicyFile::retrievePolicyFile(vector<unsigned char>& outData)
 		if (nbytes > 0)
 			outData.insert(outData.end(), buf, buf + nbytes);
 	}
-	while (nbytes > 0);
+	while (nbytes == 4096);
 
 	if (nbytes < 0 && outData.size() == 0)
 	{
@@ -1395,7 +1395,7 @@ PolicyAllowAccessFrom::PolicyAllowAccessFrom(PolicyFile* _file, const string _do
 	if(!secureSpecified)
 	{
 		if(file->getType() == PolicyFile::URL &&
-				dynamic_cast<URLPolicyFile*>(file)->getSubtype() == URLPolicyFile::HTTPS)
+				static_cast<URLPolicyFile*>(file)->getSubtype() == URLPolicyFile::HTTPS)
 			secure = true;
 		if(file->getType() == PolicyFile::SOCKET)
 			secure = false;
@@ -1486,7 +1486,7 @@ bool PolicyAllowAccessFrom::allowsAccessFrom(const URLInfo& url, uint16_t toPort
 	if (bCheckHttps)
 	{
 		if(file->getType() == PolicyFile::URL && 
-				dynamic_cast<URLPolicyFile*>(file)->getSubtype() == URLPolicyFile::HTTPS && 
+				static_cast<URLPolicyFile*>(file)->getSubtype() == URLPolicyFile::HTTPS && 
 				secure && url.getProtocol() != "https")
 			return false;
 		if(file->getType() == PolicyFile::SOCKET && 

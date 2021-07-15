@@ -88,7 +88,6 @@ public:
 	virtual int getId() const=0;
 	virtual ASObject* instance(Class_base* c=nullptr) { return nullptr; }
 	virtual MATRIX MapToBounds(const MATRIX& mat) { return mat; }
-	virtual MATRIX MapToBoundsForButton(const MATRIX& mat) { return MapToBounds(mat); }
 	virtual void resizeCompleted() {}
 };
 
@@ -155,7 +154,6 @@ public:
 	~DefineShapeTag();
 	int getId() const override { return ShapeId; }
 	ASObject* instance(Class_base* c=nullptr) override;
-	MATRIX MapToBoundsForButton(const MATRIX& mat) override;
 	void resizeCompleted() override;
 };
 
@@ -299,6 +297,7 @@ private:
 public:
 	StartSoundTag(RECORDHEADER h, std::istream& s);
 	void execute(DisplayObjectContainer* parent,bool inskipping) override;
+	const SOUNDINFO* getSoundInfo() const { return &SoundInfo; }
 };
 
 class SoundStreamHeadTag: public DisplayListTag
@@ -487,6 +486,9 @@ public:
 	virtual void getTextBounds(const tiny_string& text, int fontpixelsize, number_t& width, number_t& height)=0;
 	const TextureChunk *getCharTexture(const CharIterator& chrIt, int fontpixelsize, uint32_t &codetableindex);
 	bool hasGlyphs(const tiny_string text) const;
+	virtual int32_t getLeading() const =0;
+	virtual int32_t getAscent() const =0;
+	virtual int32_t getDescent() const =0;
 };
 
 class DefineFontTag: public FontTag
@@ -500,6 +502,9 @@ public:
 	number_t getRenderCharAdvance(uint32_t index) const override;
 	void getTextBounds(const tiny_string& text, int fontpixelsize, number_t& width, number_t& height) override;
 	void fillTextTokens(tokensVector &tokens, const tiny_string text, int fontpixelsize, FILLSTYLE& fillstyleColor, uint32_t leading,uint32_t startpos) override;
+	int32_t getLeading() const override { return 1024; }
+	int32_t getAscent() const override { return 1024; }
+	int32_t getDescent() const override { return 1024; }
 };
 
 class DefineFontInfoTag: public Tag
@@ -533,6 +538,9 @@ public:
 	number_t getRenderCharAdvance(uint32_t index) const override;
 	void getTextBounds(const tiny_string& text, int fontpixelsize, number_t& width, number_t& height) override;
 	void fillTextTokens(tokensVector &tokens, const tiny_string text, int fontpixelsize, FILLSTYLE& fillstyleColor, uint32_t leading,uint32_t startpos) override;
+	int32_t getLeading() const override { return FontLeading; }
+	int32_t getAscent() const override { return FontAscent; }
+	int32_t getDescent() const override { return FontDescent; }
 };
 
 class DefineFont3Tag: public FontTag
@@ -559,6 +567,9 @@ public:
 	number_t getRenderCharAdvance(uint32_t index) const override;
 	void getTextBounds(const tiny_string& text, int fontpixelsize, number_t& width, number_t& height) override;
 	void fillTextTokens(tokensVector &tokens, const tiny_string text, int fontpixelsize, FILLSTYLE& fillstyleColor, uint32_t leading,uint32_t startpos) override;
+	int32_t getLeading() const override { return FontLeading/20; }
+	int32_t getAscent() const override { return FontAscent/20; }
+	int32_t getDescent() const override { return FontDescent/20; }
 };
 
 class DefineFont4Tag : public DictionaryTag

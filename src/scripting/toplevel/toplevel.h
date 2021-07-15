@@ -211,6 +211,7 @@ public:
 	void handleConstruction(asAtom &target, asAtom *args, unsigned int argslen, bool buildAndLink);
 	void setConstructor(IFunction* c);
 	bool hasConstructor() { return constructor != nullptr; }
+	IFunction* getConstructor() { return constructor; }
 	Class_base(const QName& name, MemoryAccount* m);
 	//Special constructor for Class_object
 	Class_base(const Class_object*);
@@ -268,7 +269,7 @@ public:
 	void removeAllDeclaredProperties();
 };
 
-class Template_base : public ASObject
+class Template_base : public ASObject, public Type
 {
 private:
 	QName template_name;
@@ -278,6 +279,15 @@ public:
 	QName getTemplateName() { return template_name; }
 	ASPROPERTY_GETTER(_NR<Prototype>,prototype);
 	void addPrototypeGetter(SystemState *sys);
+
+
+	bool coerce(SystemState* sys, asAtom& o) const override	{ return false;}
+	void coerceForTemplate(SystemState* sys, asAtom& o) const override {}
+	tiny_string getName() const override { return "template"; }
+	EARLY_BIND_STATUS resolveMultinameStatically(const multiname& name) const override { return CANNOT_BIND;}
+	const multiname* resolveSlotTypeName(uint32_t slotId) const override { return nullptr; }
+	bool isBuiltin() const override { return true;}
+	Global* getGlobalScope() const override	{ return nullptr; }
 };
 
 class Class_object: public Class_base
@@ -401,7 +411,7 @@ class Function_object: public ASObject
 public:
 	Function_object(Class_base* c, _R<ASObject> p);
 	_NR<ASObject> functionPrototype;
-	void finalize() { functionPrototype.reset(); }
+	void finalize() override { functionPrototype.reset(); }
 
 	GET_VARIABLE_RESULT getVariableByMultiname(asAtom& ret, const multiname& name, GET_VARIABLE_OPTION opt=NONE) override;
 };
@@ -428,7 +438,7 @@ public:
 	Class_base* inClass;
 	// if this is a class method, this indicates if it is a static or instance method
 	bool isStatic;
-	bool isCloned;
+	IFunction* clonedFrom;
 	/* returns whether this is this a method of a function */
 	bool isMethod() const { return inClass != nullptr; }
 	bool isConstructed() const override { return constructIndicator; }
@@ -436,7 +446,7 @@ public:
 	{
 		inClass=nullptr;
 		isStatic=false;
-		isCloned=false;
+		clonedFrom=nullptr;
 		functionname=0;
 		length=0;
 		closure_this.reset();
@@ -449,7 +459,7 @@ public:
 		ret=clone();
 		ret->setClass(getClass());
 		ret->closure_this=c;
-		ret->isCloned=true;
+		ret->clonedFrom=this;
 		ret->isStatic=isStatic;
 		ret->constructIndicator = true;
 		ret->constructorCallComplete = true;
@@ -566,6 +576,7 @@ public:
 class SyntheticFunction : public IFunction
 {
 friend class ABCVm;
+friend class ABCContext;
 friend class Class<IFunction>;
 friend class Class_base;
 public:

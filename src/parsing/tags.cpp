@@ -671,9 +671,9 @@ const TextureChunk* FontTag::getCharTexture(const CharIterator& chrIt, int fontp
 			if (it == getGlyphShapes().at(i).scaledtexturecache.end())
 			{
 				const std::vector<SHAPERECORD>& sr = getGlyphShapes().at(i).ShapeRecords;
-				number_t ystart = getRenderCharStartYPos();
+				number_t ystart = getRenderCharStartYPos()/1024.0f;
 				ystart *=number_t(tokenscaling);
-				MATRIX glyphMatrix(number_t(tokenscaling)/1024.0f, number_t(tokenscaling)/1024.0f, 0, 0,0,ystart/1024.0f);
+				MATRIX glyphMatrix(number_t(tokenscaling)/1024.0f, number_t(tokenscaling)/1024.0f, 0, 0,0,ystart);
 				tokensVector tmptokens;
 				TokenContainer::FromShaperecordListToShapeVector(sr,tmptokens,fillStyles,glyphMatrix);
 				number_t xmin, xmax, ymin, ymax;
@@ -1015,7 +1015,8 @@ void DefineFont2Tag::fillTextTokens(tokensVector &tokens, const tiny_string text
 
 number_t DefineFont3Tag::getRenderCharStartYPos() const
 {
-	return 1024.0*20.0+FontLeading/2.0;
+	// not in the specs but it seems that Adobe subtracts the FontDescent from the vertical starting point for rendering
+	return 1024.0*20.0 - ((FontAscent+FontDescent) < 1024.0*20.0 ? number_t(FontDescent) : 0);
 }
 
 number_t DefineFont3Tag::getRenderCharAdvance(uint32_t index) const
@@ -1029,7 +1030,7 @@ void DefineFont3Tag::getTextBounds(const tiny_string& text, int fontpixelsize, n
 {
 	int tokenscaling = fontpixelsize * this->scaling;
 	width=0;
-	height= tokenscaling;
+	height= ((FontAscent+FontDescent+FontLeading)/1024.0/20.0)* tokenscaling;
 	number_t tmpwidth=0;
 
 	for (CharIterator it = text.begin(); it != text.end(); it++)
@@ -1039,7 +1040,7 @@ void DefineFont3Tag::getTextBounds(const tiny_string& text, int fontpixelsize, n
 			if (width < tmpwidth)
 				width = tmpwidth;
 			tmpwidth = 0;
-			height+=tokenscaling;
+			height+=tokenscaling+ (this->FontLeading/1024.0/20.0)*this->scaling;
 		}
 		else
 		{
@@ -1355,11 +1356,11 @@ ASObject* BitmapTag::instance(Class_base* c)
 	Class_base* realClass=(c)?c:bindedTo;
 	Class_base* classRet = Class<BitmapData>::getClass(loadedFrom->getSystemState());
 
-	if(!realClass)
-		return new (classRet->memoryAccount) BitmapData(classRet, bitmap);
 
 	if (loadedFrom->usesActionScript3)
 	{
+		if(!realClass)
+			return new (classRet->memoryAccount) BitmapData(classRet, bitmap);
 		if(realClass->isSubClass(Class<Bitmap>::getClass(realClass->getSystemState())))
 		{
 			BitmapData* ret=new (classRet->memoryAccount) BitmapData(classRet, bitmap);
@@ -1369,9 +1370,11 @@ ASObject* BitmapTag::instance(Class_base* c)
 	}
 	else
 	{
+		if(!realClass)
+			return new (classRet->memoryAccount) AVM1BitmapData(classRet, bitmap);
 		if(realClass->isSubClass(Class<AVM1Bitmap>::getClass(realClass->getSystemState())))
 		{
-			BitmapData* ret=new (classRet->memoryAccount) BitmapData(classRet, bitmap);
+			AVM1BitmapData* ret=new (classRet->memoryAccount) AVM1BitmapData(classRet, bitmap);
 			Bitmap* bitmapRet= new (realClass->memoryAccount) AVM1Bitmap(realClass,_MR(ret));
 			return bitmapRet;
 		}
@@ -1533,11 +1536,6 @@ ASObject *DefineShapeTag::instance(Class_base *c)
 	}
 	ret->setupShape(this, 1.0f/20.0f);
 	return ret;
-}
-MATRIX DefineShapeTag::MapToBoundsForButton(const MATRIX &mat)
-{
-	MATRIX m (1,1,0,0,ShapeBounds.Xmin/20,ShapeBounds.Ymin/20);
-	return mat.multiplyMatrix(m);
 }
 
 void DefineShapeTag::resizeCompleted()
@@ -1821,7 +1819,7 @@ void PlaceObject2Tag::execute(DisplayObjectContainer* parent, bool inskipping)
 			if (instance->is<BitmapData>())
 				toAdd = parent->loadedFrom->usesActionScript3 ?
 							Class<Bitmap>::getInstanceS(instance->getSystemState(),_R<BitmapData>(instance->as<BitmapData>())) :
-							Class<AVM1Bitmap>::getInstanceS(instance->getSystemState(),_R<BitmapData>(instance->as<BitmapData>()));
+							Class<AVM1Bitmap>::getInstanceS(instance->getSystemState(),_R<AVM1BitmapData>(instance->as<AVM1BitmapData>()));
 			else
 				toAdd=dynamic_cast<DisplayObject*>(instance);
 			if(!toAdd && instance)
@@ -2270,14 +2268,15 @@ ASObject* DefineButtonTag::instance(Class_base* c)
 			DisplayObject* state=dynamic_cast<DisplayObject*>(dict->instance());
 			assert_and_throw(state);
 			//The matrix must be set before invoking the constructor
-			state->setLegacyMatrix(dict->MapToBoundsForButton(i->PlaceMatrix));
+			state->setLegacyMatrix(dict->MapToBounds(i->PlaceMatrix));
 			state->legacy=true;
 			state->name = BUILTIN_STRINGS::EMPTY;
 			if (i->ButtonHasBlendMode && i->buttonVersion == 2)
 				state->setBlendMode(i->BlendMode);
 			if (i->ButtonHasFilterList && i->FilterList.Filters.size() != 0)
 				LOG(LOG_NOT_IMPLEMENTED,"DefineButtonTag: FilterList "<<this->getId());
-			state->colorTransform=_NR<ColorTransform>(Class<ColorTransform>::getInstanceS(state->getSystemState(),i->ColorTransform));
+			if (i->ColorTransform.isfilled())
+				state->colorTransform=_NR<ColorTransform>(Class<ColorTransform>::getInstanceS(state->getSystemState(),i->ColorTransform));
 
 			if(states[j] == nullptr)
 			{
@@ -2545,7 +2544,8 @@ void StartSoundTag::play(DefineSoundTag *soundTag)
 			soundTag->getSoundData(),
 			AudioFormat(soundTag->getAudioCodec(),
 			    soundTag->getSampleRate(),
-			    soundTag->getChannels()),false));
+			    soundTag->getChannels()),
+			false,this));
 		soundTag->soundchanel->setConstant();
 	}
 	if (this->SoundInfo.SyncNoMultiple && soundTag->soundchanel->isPlaying())

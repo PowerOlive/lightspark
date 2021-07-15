@@ -255,7 +255,7 @@ bool Video::renderImpl(RenderContext& ctxt) const
 			1.0f,1.0f,
 			1.0f,1.0f,1.0f,1.0f,
 			0.0f,0.0f,0.0f,0.0f,
-			false,false,0.0,RGB());
+			false,false,0.0,RGB(),false);
 		if (!videotag)
 			netStream->unlock();
 		return false;
@@ -455,11 +455,14 @@ ASFUNCTIONBODY_ATOM(Sound,play)
 {
 	Sound* th=asAtomHandler::as<Sound>(obj);
 	number_t startTime;
-	ARG_UNPACK_ATOM(startTime, 0);
+	int32_t loops;
+	_NR<SoundTransform> soundtransform;
+	
+	ARG_UNPACK_ATOM(startTime, 0)(loops,0)(soundtransform,NullRef);
 	if (!sys->mainClip->usesActionScript3) // actionscript2 expects the starttime in seconds, actionscript3 in milliseconds
 		startTime *= 1000;
-	if (argslen > 1)
-		LOG(LOG_NOT_IMPLEMENTED,"Sound.play with more than one argument");
+	if (soundtransform.isNull())
+		soundtransform = _MR(Class<SoundTransform>::getInstanceSNoArgs(sys));
 
 	th->incRef();
 	if (th->container)
@@ -469,6 +472,8 @@ ASFUNCTIONBODY_ATOM(Sound,play)
 		getVm(th->getSystemState())->addEvent(_MR(th),_MR(Class<SampleDataEvent>::getInstanceS(th->getSystemState(),data,0)));
 		th->soundChannel = _MR(Class<SoundChannel>::getInstanceS(sys,th->soundData, AudioFormat(LINEAR_PCM_FLOAT_BE,44100,2),false));
 		th->soundChannel->setStartTime(startTime);
+		th->soundChannel->setLoops(loops);
+		th->soundChannel->soundTransform = soundtransform;
 		th->soundChannel->incRef();
 		ret = asAtomHandler::fromObjectNoPrimitive(th->soundChannel.getPtr());
 	}
@@ -476,12 +481,18 @@ ASFUNCTIONBODY_ATOM(Sound,play)
 	{
 		if (th->soundChannel)
 		{
+			th->soundChannel->setLoops(loops);
+			th->soundChannel->soundTransform = soundtransform;
+			th->soundChannel->play(startTime);
+			th->soundChannel->incRef();
 			ret = asAtomHandler::fromObjectNoPrimitive(th->soundChannel.getPtr());
- 			th->soundChannel->play(startTime);
 			return;
 		}
 		SoundChannel* s = Class<SoundChannel>::getInstanceS(sys,th->soundData, th->format);
 		s->setStartTime(startTime);
+		s->setLoops(loops);
+		s->soundTransform = soundtransform;
+		s->play(startTime);
 		ret = asAtomHandler::fromObjectNoPrimitive(s);
 	}
 }
@@ -706,9 +717,9 @@ ASFUNCTIONBODY_ATOM(SoundLoaderContext,_constructor)
 ASFUNCTIONBODY_GETTER_SETTER(SoundLoaderContext,bufferTime);
 ASFUNCTIONBODY_GETTER_SETTER(SoundLoaderContext,checkPolicyFile);
 
-SoundChannel::SoundChannel(Class_base* c, _NR<StreamCache> _stream, AudioFormat _format, bool autoplay)
+SoundChannel::SoundChannel(Class_base* c, _NR<StreamCache> _stream, AudioFormat _format, bool autoplay, StartSoundTag* _tag)
 	: EventDispatcher(c),stream(_stream),stopped(true),terminated(true),audioDecoder(nullptr),audioStream(nullptr),
-	format(_format),oldVolume(-1.0),startTime(0),restartafterabort(false),soundTransform(_MR(Class<SoundTransform>::getInstanceS(c->getSystemState()))),
+	format(_format),tag(_tag),oldVolume(-1.0),startTime(0),loopstogo(0),restartafterabort(false),soundTransform(_MR(Class<SoundTransform>::getInstanceS(c->getSystemState()))),
 	leftPeak(1),rightPeak(1)
 {
 	subtype=SUBTYPE_SOUNDCHANNEL;
@@ -801,8 +812,8 @@ void SoundChannel::sinit(Class_base* c)
 	REGISTER_GETTER_SETTER(c,soundTransform);
 }
 
-ASFUNCTIONBODY_GETTER_NOT_IMPLEMENTED(SoundChannel,leftPeak);
-ASFUNCTIONBODY_GETTER_NOT_IMPLEMENTED(SoundChannel,rightPeak);
+ASFUNCTIONBODY_GETTER(SoundChannel,leftPeak);
+ASFUNCTIONBODY_GETTER(SoundChannel,rightPeak);
 ASFUNCTIONBODY_GETTER_SETTER_CB(SoundChannel,soundTransform,validateSoundTransform);
 
 void SoundChannel::buildTraits(ASObject* o)
@@ -848,7 +859,16 @@ ASFUNCTIONBODY_ATOM(SoundChannel,getPosition)
 }
 void SoundChannel::execute()
 {
-	playStream();
+	while (true)
+	{
+		playStream();
+		if (loopstogo)
+			loopstogo--;
+		else
+			break;
+		if (ACQUIRE_READ(stopped))
+			break;
+	}
 }
 
 void SoundChannel::playStream()
@@ -897,7 +917,7 @@ void SoundChannel::playStream()
 				audioDecoder=streamDecoder->audioDecoder;
 
 			if(audioStream==nullptr && audioDecoder && audioDecoder->isValid())
-				audioStream=getSystemState()->audioManager->createStream(audioDecoder,false,this,startTime);
+				audioStream=getSystemState()->audioManager->createStream(audioDecoder,false,this,startTime,soundTransform ? soundTransform->volume : 1.0);
 
 			if(audioStream)
 			{
@@ -907,6 +927,7 @@ void SoundChannel::playStream()
 					audioStream->setVolume(soundTransform->volume);
 					oldVolume = soundTransform->volume;
 				}
+				checkEnvelope();
 			}
 			
 			if(threadAborting)
@@ -1001,6 +1022,24 @@ void SoundChannel::threadAbort()
 		audioDecoder=nullptr;
 	}
 	mutex.unlock();
+}
+void SoundChannel::checkEnvelope()
+{
+	if (tag && tag->getSoundInfo()->HasEnvelope)
+	{
+		uint32_t playedtime = audioStream->getPlayedTime();
+		auto itprev = tag->getSoundInfo()->SoundEnvelope.begin();
+		for (auto it = tag->getSoundInfo()->SoundEnvelope.begin(); it != tag->getSoundInfo()->SoundEnvelope.end(); it++)
+		{
+			if (it->Pos44/44>playedtime)
+				break;
+			itprev=it;
+		}
+		leftPeak= number_t(itprev->LeftLevel)/32768.0;
+		rightPeak= number_t(itprev->LeftLevel)/32768.0;
+		if (audioStream)
+			audioStream->setPanning(itprev->LeftLevel,itprev->RightLevel);
+	}
 }
 
 void StageVideo::sinit(Class_base *c)

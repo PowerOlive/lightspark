@@ -38,6 +38,7 @@
 #include "backends/extscriptobject.h"
 #include "backends/input.h"
 #include "backends/locale.h"
+#include "backends/currency.h"
 #include "memory_support.h"
 
 #ifdef ENABLE_CURL
@@ -313,6 +314,7 @@ SystemState::SystemState(uint32_t fileSize, FLASH_MODE mode):
 	intervalManager=new IntervalManager();
 	securityManager=new SecurityManager();
 	localeManager = new LocaleManager();
+    currencyManager = new CurrencyManager();
 
 	_NR<LoaderInfo> loaderInfo=_MR(Class<LoaderInfo>::getInstanceS(this));
 	loaderInfo->applicationDomain = applicationDomain;
@@ -517,6 +519,8 @@ void SystemState::stopEngines()
 	securityManager=nullptr;
 	delete localeManager;
 	localeManager=nullptr;
+    delete currencyManager;
+    currencyManager=NULL;
 	delete threadPool;
 	threadPool=nullptr;
 	delete downloadThreadPool;
@@ -1235,7 +1239,8 @@ void SystemState::flushInvalidationQueue()
 					renderThread->addRefreshableSurface(d,cur);
 			}
 			cur->hasChanged=false;
-			cur->resetNeedsTextureRecalculation();
+			if (getRenderThread()->isStarted())
+				cur->resetNeedsTextureRecalculation();
 		}
 		_NR<DisplayObject> next=cur->invalidateQueueNext;
 		cur->invalidateQueueNext=NullRef;
@@ -1984,8 +1989,6 @@ _NR<RootMovieClip> RootMovieClip::getRoot()
 
 _NR<Stage> RootMovieClip::getStage()
 {
-	if (!isConstructed())
-		return NullRef;
 	getSystemState()->stage->incRef();
 	return _MR(getSystemState()->stage);
 }

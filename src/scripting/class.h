@@ -58,7 +58,7 @@ public:
 		if (global)
 			global->checkScriptInit();
 	}
-	bool destruct()
+	bool destruct() override
 	{
 		instancefactory.reset();
 		auto it = class_scope.begin();
@@ -87,9 +87,10 @@ public:
 	}
 	//Closure stack
 	std::vector<scope_entry> class_scope;
-	virtual void describeClassMetadata(pugi::xml_node &root) const override;
+	void describeClassMetadata(pugi::xml_node &root) const override;
 	bool isBuiltin() const override { return false; }
 	bool hasoverriddenmethod(multiname* name) const;
+	GET_VARIABLE_RESULT getVariableByMultiname(asAtom& ret, const multiname& name, GET_VARIABLE_OPTION opt) override;
 };
 
 /* helper function: does Class<ASObject>::getInstances(), but solves forward declaration problem */
@@ -142,7 +143,7 @@ class Class: public Class_base
 protected:
 	Class(const QName& name, MemoryAccount* m):Class_base(name, m){}
 	//This function is instantiated always because of inheritance
-	void getInstance(asAtom& ret, bool construct, asAtom* args, const unsigned int argslen, Class_base* realClass=nullptr)
+	void getInstance(asAtom& ret, bool construct, asAtom* args, const unsigned int argslen, Class_base* realClass=nullptr) override
 	{
 		if(realClass==nullptr)
 			realClass=this;
@@ -246,11 +247,11 @@ public:
 	{
 		return dynamic_cast<T*>(o);
 	}
-	void buildInstanceTraits(ASObject* o) const
+	void buildInstanceTraits(ASObject* o) const override
 	{
 		T::buildTraits(o);
 	}
-	void generator(asAtom& ret, asAtom* args, const unsigned int argslen)
+	void generator(asAtom& ret, asAtom* args, const unsigned int argslen) override
 	{
 		T::generator(ret,getSystemState(), asAtomHandler::invalidAtom, args, argslen);
 	}

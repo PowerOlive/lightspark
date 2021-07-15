@@ -30,6 +30,9 @@
 #include "scripting/argconv.h"
 #include <3rdparty/pugixml/src/pugixml.hpp>
 
+// according to TextLineMetrics specs, there are always 2 pixels added to each side of a textfield
+#define TEXTFIELD_PADDING 2
+
 using namespace std;
 using namespace lightspark;
 
@@ -170,7 +173,7 @@ void TextField::sinit(Class_base* c)
 	c->setDeclaredMethodByQName("height","",Class<IFunction>::getFunction(c->getSystemState(),TextField::_setHeight),SETTER_METHOD,true);
 	c->setDeclaredMethodByQName("htmlText","",Class<IFunction>::getFunction(c->getSystemState(),TextField::_getHtmlText),GETTER_METHOD,true);
 	c->setDeclaredMethodByQName("htmlText","",Class<IFunction>::getFunction(c->getSystemState(),TextField::_setHtmlText),SETTER_METHOD,true);
-	c->setDeclaredMethodByQName("length","",Class<IFunction>::getFunction(c->getSystemState(),TextField::_getLength),GETTER_METHOD,true);
+	c->setDeclaredMethodByQName("length","",Class<IFunction>::getFunction(c->getSystemState(),TextField::_getLength,0,Class<Integer>::getRef(c->getSystemState()).getPtr()),GETTER_METHOD,true);
 	c->setDeclaredMethodByQName("text","",Class<IFunction>::getFunction(c->getSystemState(),TextField::_getText),GETTER_METHOD,true);
 	c->setDeclaredMethodByQName("text","",Class<IFunction>::getFunction(c->getSystemState(),TextField::_setText),SETTER_METHOD,true);
 	c->setDeclaredMethodByQName("textHeight","",Class<IFunction>::getFunction(c->getSystemState(),TextField::_getTextHeight),GETTER_METHOD,true);
@@ -321,9 +324,9 @@ ASFUNCTIONBODY_ATOM(TextField,_setAutoSize)
 	ARG_UNPACK_ATOM(autoSizeString);
 
 	AUTO_SIZE newAutoSize = AS_NONE;
-	if(autoSizeString == "none")
+	if(autoSizeString == "none" || (!th->loadedFrom->usesActionScript3 && autoSizeString=="false"))
 		newAutoSize = AS_NONE;
-	else if (autoSizeString == "left")
+	else if (autoSizeString == "left" || (!th->loadedFrom->usesActionScript3 && autoSizeString=="true"))
 		newAutoSize = AS_LEFT;
 	else if (autoSizeString == "right")
 		newAutoSize = AS_RIGHT;
@@ -348,37 +351,31 @@ void TextField::setSizeAndPositionFromAutoSize()
 	if (autoSize == AS_NONE)
 		return;
 
+	// TODO handle wordwrap
+
 	switch (autoSize)
 	{
 		case AS_RIGHT:
-			autosizeposition = max(0.0,number_t(width)-textWidth);
+			autosizeposition = max(0.0,number_t(width-TEXTFIELD_PADDING*2)-textWidth);
 			break;
 		case AS_CENTER:
-			autosizeposition = max(0.0,(number_t(width) - textWidth)/2.0);
+			autosizeposition = 0;
+			if (!wordWrap) // not in the specs but Adobe changes x position if wordWrap is not set
+				this->setX(this->getXY().x + (int32_t((width-TEXTFIELD_PADDING*2) - textWidth)/2));
+			width = textWidth+TEXTFIELD_PADDING*2;
 			break;
 		default:
 			autosizeposition = 0;
+			width = textWidth+TEXTFIELD_PADDING*2;
 			break;
 	}
-	if (!wordWrap)
-	{
-		if (width < textWidth)
-			width = textWidth;
-		if (height < textHeight)
-			height = textHeight;
-	}
-	else
-		height = textHeight;
+	height = textHeight+TEXTFIELD_PADDING*2;
 }
 
 ASFUNCTIONBODY_ATOM(TextField,_getWidth)
 {
 	TextField* th=asAtomHandler::as<TextField>(obj);
-	// it seems that Adobe returns the textwidth if in autoSize mode
-	if (th->autoSize != AS_NONE || th->wordWrap)
-		asAtomHandler::setUInt(ret,sys,th->textWidth);
-	else
-		asAtomHandler::setUInt(ret,sys,th->width);
+	asAtomHandler::setUInt(ret,sys,th->width);
 }
 
 ASFUNCTIONBODY_ATOM(TextField,_setWidth)
@@ -392,10 +389,10 @@ ASFUNCTIONBODY_ATOM(TextField,_setWidth)
 		th->width=asAtomHandler::toUInt(args[0]);
 		th->hasChanged=true;
 		th->setNeedsTextureRecalculation();
+		th->updateSizes();
+		th->setSizeAndPositionFromAutoSize();
 		if(th->onStage && th->isVisible())
 			th->requestInvalidation(sys);
-		else
-			th->updateSizes();
 		th->legacy=false;
 	}
 }
@@ -421,10 +418,10 @@ ASFUNCTIONBODY_ATOM(TextField,_setHeight)
 		th->height=asAtomHandler::toUInt(args[0]);
 		th->hasChanged=true;
 		th->setNeedsTextureRecalculation();
+		th->updateSizes();
+		th->setSizeAndPositionFromAutoSize();
 		if(th->onStage && th->isVisible())
 			th->requestInvalidation(th->getSystemState());
-		else
-			th->updateSizes();
 		th->legacy=false;
 	}
 	//else do nothing as the height is determined by autoSize
@@ -1045,8 +1042,7 @@ void TextField::updateSizes()
 	//width = w; //TODO: check the case when w,h == 0
 	textWidth=tw;
 	//height = h;
-	//textHeight=th;
-	textHeight=fontSize+(leading > 0 ? leading : -leading); // textheight seems to be independent of the text actually rendered
+	textHeight=th;
 }
 
 tiny_string TextField::toHtmlText()
@@ -1408,8 +1404,11 @@ IDrawable* TextField::invalidate(DisplayObject* target, const MATRIX& initialMat
 		}
 		fillstyleTextColor.FillStyleType=SOLID_FILL;
 		fillstyleTextColor.Color= RGBA(textColor.Red,textColor.Green,textColor.Blue,255);
-		embeddedfont->fillTextTokens(tokens,text,fontSize,fillstyleTextColor,leading,autosizeposition);
-		return TokenContainer::invalidate(target, totalMatrix,smoothing);
+		if (!text.empty())
+			embeddedfont->fillTextTokens(tokens,text,fontSize,fillstyleTextColor,leading,autosizeposition);
+		if (tokens.empty())
+			return nullptr;
+		return TokenContainer::invalidate(target, initialMatrix,smoothing);
 	}
 	std::vector<IDrawable::MaskData> masks;
 	bool isMask;
@@ -1461,7 +1460,7 @@ bool TextField::renderImpl(RenderContext& ctxt) const
 	if (text.empty() && !this->border && !this->background)
 		return false;
 	FontTag* embeddedfont = (fontID != UINT32_MAX ? this->loadedFrom->getEmbeddedFontByID(fontID) : this->loadedFrom->getEmbeddedFont(font));
-	if (embeddedfont && embeddedfont->hasGlyphs(text))
+	if ((ctxt.contextType == RenderContext::GL) && embeddedfont && embeddedfont->hasGlyphs(text))
 	{
 		// fast rendering path using pre-generated textures for every glyph
 		float rotation = getConcatenatedMatrix().getRotation();
@@ -1539,16 +1538,16 @@ bool TextField::renderImpl(RenderContext& ctxt) const
 						rotation,rx*scalex,ry*scaley,rwidth*scalex,rheight*scaley,xscale, yscale,
 						redMultiplier, greenMultiplier, blueMultiplier, alphaMultiplier,
 						redOffset, greenOffset, blueOffset, alphaOffset,
-						isMask, hasMask,3.0, this->borderColor);
+						isMask, hasMask,3.0, this->borderColor,false);
 				ctxt.renderTextured(tex, (x+1)*scalex, (y+1)*scaley,
 						(tex.width-2)*scalex, (tex.height-2)*scaley,
 						getConcatenatedAlpha(), RenderContext::RGB_MODE,
 						rotation,(rx+1)*scalex,(ry+1)*scaley,(rwidth-2)*scalex,(rheight-2)*scaley,xscale, yscale,
 						redMultiplier, greenMultiplier, blueMultiplier, alphaMultiplier,
 						redOffset, greenOffset, blueOffset, alphaOffset,
-						isMask, hasMask,3.0, this->backgroundColor);
+						isMask, hasMask,3.0, this->backgroundColor,false);
 			}
-			else
+			else if (this->background)
 			{
 				ctxt.renderTextured(tex, x*scalex, y*scaley,
 						tex.width*scalex, tex.height*scaley,
@@ -1556,19 +1555,19 @@ bool TextField::renderImpl(RenderContext& ctxt) const
 						rotation,rx*scalex,ry*scaley,rwidth*scalex,rheight*scaley,xscale, yscale,
 						redMultiplier, greenMultiplier, blueMultiplier, alphaMultiplier,
 						redOffset, greenOffset, blueOffset, alphaOffset,
-						isMask, hasMask,3.0, this->backgroundColor);
+						isMask, hasMask,3.0, this->backgroundColor,false);
 			}
 			
 			if (this->caretblinkstate)
 			{
 				int ypadding = (bymax-bymin-4);
-				uint32_t tw=0;
+				uint32_t tw=autosizeposition;
 				if (!text.empty())
 				{
 					tiny_string tmptxt = text.substr(0,caretIndex);
 					number_t w,h;
 					embeddedfont->getTextBounds(tmptxt,fontSize,w,h);
-					tw = w;
+					tw += w;
 				}
 				MATRIX totalMatrix;
 				std::vector<IDrawable::MaskData> masks;
@@ -1586,45 +1585,45 @@ bool TextField::renderImpl(RenderContext& ctxt) const
 						rotation,rx*scalex,ry*scaley,rwidth*scalex,rheight*scaley,xscale, yscale,
 						redMultiplier, greenMultiplier, blueMultiplier, alphaMultiplier,
 						redOffset, greenOffset, blueOffset, alphaOffset,
-						isMask, hasMask,3.0, RGB(0x00,0x00,0x00));
+						isMask, hasMask,3.0, this->textColor,true);
 			}
 		}
 		number_t xpos=autosizeposition;
-		number_t ypos=-this->leading;
+		number_t ypos=-TEXTFIELD_PADDING/yscale;
+		float scalex;
+		float scaley;
+		int offx,offy;
+		getSystemState()->stageCoordinateMapping(getSystemState()->getRenderThread()->windowWidth,getSystemState()->getRenderThread()->windowHeight,offx,offy, scalex,scaley);
 		for (auto it = text.begin(); it != text.end(); it++)
 		{
 			if (*it == 13 || *it == 10)
 			{
-				xpos = 0;
-				ypos += this->leading;
+				// TODO
+				// - calculate the starting position for every line if it is not left aligned
+				// - handle word wrapping
+				xpos = autosizeposition;
+				ypos += this->leading+(embeddedfont->getAscent()+embeddedfont->getDescent()+embeddedfont->getLeading())*fontSize/1024;
 				continue;
 			}
-			const TextureChunk* tex = embeddedfont->getCharTexture(it,this->fontSize,codetableindex);
+			const TextureChunk* tex = embeddedfont->getCharTexture(it,this->fontSize*yscale,codetableindex);
 			if (tex)
 			{
 				int32_t x,y,rx,ry;
 				uint32_t width,height;
 				uint32_t rwidth,rheight;
 				number_t bxmin=xpos;
-				number_t bxmax=xpos+tex->width;
+				number_t bxmax=xpos+tex->width/yscale;
 				number_t bymin=ypos;
-				number_t bymax=ypos+tex->height;
+				number_t bymax=ypos+tex->height/yscale;
 				//Compute the matrix and the masks that are relevant
 				MATRIX totalMatrix;
 				std::vector<IDrawable::MaskData> masks;
-				float scalex;
-				float scaley;
-				int offx,offy;
-				getSystemState()->stageCoordinateMapping(getSystemState()->getRenderThread()->windowWidth,getSystemState()->getRenderThread()->windowHeight,offx,offy, scalex,scaley);
 			
 				bool isMask;
 				bool hasMask;
 				totalMatrix=getConcatenatedMatrix();
 				computeMasksAndMatrix(this,masks,totalMatrix,false,isMask,hasMask);
 				computeBoundsForTransformedRect(bxmin,bxmax,bymin,bymax,x,y,width,height,totalMatrix);
-			
-				width = bxmax-bxmin;
-				height = bymax-bymin;
 				MATRIX totalMatrix2;
 				std::vector<IDrawable::MaskData> masks2;
 				totalMatrix2=getConcatenatedMatrix();
@@ -1635,10 +1634,10 @@ bool TextField::renderImpl(RenderContext& ctxt) const
 				ctxt.renderTextured(*tex, x*scalex, y*scaley,
 						tex->width*scalex, tex->height*scaley,
 						getConcatenatedAlpha(), RenderContext::RGB_MODE,
-						rotation,rx*scalex,ry*scaley,rwidth*scalex,rheight*scaley,xscale, yscale,
+						rotation,rx*scalex,ry*scaley,rwidth*scalex,rheight*scaley,1.0, 1.0,
 						redMultiplier, greenMultiplier, blueMultiplier, alphaMultiplier,
 						redOffset, greenOffset, blueOffset, alphaOffset,
-						isMask, hasMask,2.0, this->textColor);
+						isMask, hasMask,2.0, this->textColor,true);
 			}
 			xpos += embeddedfont->getRenderCharAdvance(codetableindex)*fontSize;
 		}

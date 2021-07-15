@@ -17,37 +17,28 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef SCRIPTING_TOPLEVEL_REGEXP_H
-#define SCRIPTING_TOPLEVEL_REGEXP_H 1
-#include "compat.h"
-#include "asobject.h"
-#include <pcre.h>
+#ifndef CURRENCY_H
+#define CURRENCY_H 1
+
+#include "tiny_string.h"
+#include <unordered_map>
 
 namespace lightspark
 {
 
-class RegExp: public ASObject
-{
-public:
-	RegExp(Class_base* c);
-	RegExp(Class_base* c, const tiny_string& _re);
-	pcre* compile(bool isutf8);
-	static void sinit(Class_base* c);
-	static void buildTraits(ASObject* o);
-	ASObject *match(const tiny_string& str);
-	ASFUNCTION_ATOM(_constructor);
-	ASFUNCTION_ATOM(generator);
-	ASFUNCTION_ATOM(exec);
-	ASFUNCTION_ATOM(test);
-	ASFUNCTION_ATOM(_toString);
-	ASPROPERTY_GETTER(bool, dotall);
-	ASPROPERTY_GETTER(bool, global);
-	ASPROPERTY_GETTER(bool, ignoreCase);
-	ASPROPERTY_GETTER(bool, extended);
-	ASPROPERTY_GETTER(bool, multiline);
-	ASPROPERTY_GETTER_SETTER(int, lastIndex);
-	ASPROPERTY_GETTER(tiny_string, source);
-};
-
+    class CurrencyManager
+    {
+        private:
+            std::locale requestedLocale;
+            std::unordered_map<std::string, std::string> currencySymbols;
+            std::unordered_map<std::string, std::string> countryISOSymbols;
+        public:
+            CurrencyManager();
+            std::unordered_map<std::string, std::string> getCurrencySymbols();
+            std::unordered_map<std::string, std::string> getCountryISOSymbols();
+            std::string getCurrencySymbol(std::string currencyName);
+            std::string getCountryISOSymbol(std::string isoCountryCode);
+    };
 }
-#endif /* SCRIPTING_TOPLEVEL_REGEXP_H */
+
+#endif // CURRENCY_H

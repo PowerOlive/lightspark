@@ -35,6 +35,7 @@ SET(LIBSPARK_SOURCES
   backends/audio.cpp
   backends/builtindecoder.cpp
   backends/config.cpp
+  backends/currency.cpp
   backends/decoder.cpp
   backends/extscriptobject.cpp
   backends/geometry.cpp
@@ -325,6 +326,9 @@ IF(WIN32)
 # and add them back in the correct order
 	SET(LIGHTSPARK_ALL_LIBRARIES ${LIGHTSPARK_ALL_LIBRARIES} usp10 gdi32)
 ENDIF(WIN32)
+IF(${CMAKE_SYSTEM_PROCESSOR} MATCHES "ppc")
+	SET(LIGHTSPARK_ALL_LIBRARIES ${LIGHTSPARK_ALL_LIBRARIES} atomic)
+ENDIF()
 
 TARGET_LINK_LIBRARIES(spark ${LIGHTSPARK_ALL_LIBRARIES})
 SET_TARGET_PROPERTIES(spark PROPERTIES VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}")
